@@ -208,12 +208,6 @@ func main() {
 	// Start the server
 	port := ":8080"
 	fmt.Printf("🚀 Server starting on port %s\n", port)
-	fmt.Println("📡 API Endpoints:")
-	fmt.Println("  POST   /api/create-bookmark - Create a new bookmark")
-	fmt.Println("  GET    /api/get-bookmarks - Get all bookmarks")
-	fmt.Println("  GET    /api/get-tags - Get all unique tags")
-	fmt.Println("  PUT    /api/edit-bookmark/{id} - Edit a bookmark")
-	fmt.Println("  DELETE /api/delete-bookmark/{id} - Delete a bookmark")
 	fmt.Printf("🌐 App available at: http://localhost%s\n", port)
 
 	if err := http.ListenAndServe(port, nil); err != nil {

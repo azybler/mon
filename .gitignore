@@ -154,6 +154,7 @@ api/data/bookmarks/DISCARD
 api/data/bookmarks/KEYREGISTRY
 api/data/bookmarks/LOCK
 api/data/bookmarks/MANIFEST
+api/data/
 
 # IDE and Editor files
 .vscode/
