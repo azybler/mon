@@ -1,4 +1,33 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
+
+// Memoized search input component to prevent unnecessary re-renders
+const SearchInput = memo(({ searchKeywords, onSearchChange, onClearSearch }) => {
+  const searchInputRef = useRef(null)
+
+  return (
+    <div className="search-section">
+      <div className="search-container">
+        <input
+          ref={searchInputRef}
+          type="text"
+          placeholder="Search bookmarks... (use -word to exclude, words can be in any order)"
+          value={searchKeywords}
+          onChange={onSearchChange}
+          className="search-input"
+        />
+        {searchKeywords && (
+          <button 
+            className="clear-search-button"
+            onClick={onClearSearch}
+            title="Clear search"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+    </div>
+  )
+})
 
 // Debounce hook for performance optimization
 function useDebounce(value, delay) {
@@ -82,34 +111,12 @@ function Bookmarks() {
     initializeData()
   }, [])
 
-  // Fetch bookmarks when filters change (but only after initial load)
-  useEffect(() => {
-    if (isInitialized) {
-      fetchBookmarks()
-    }
-  }, [debouncedSelectedTags, debouncedFilterMode, debouncedSearchKeywords, isInitialized])
-
-  const fetchTags = useCallback(async () => {
-    try {
-      setTagsLoading(true)
-      const response = await fetch('http://localhost:8080/api/get-tags')
-      const data = await response.json()
-      
-      if (data.success) {
-        setTags(data.data || [])
-      } else {
-        console.error('Failed to fetch tags:', data.message)
-      }
-    } catch (err) {
-      console.error('Error fetching tags:', err)
-    } finally {
-      setTagsLoading(false)
-    }
-  }, [])
-
   const fetchBookmarks = useCallback(async () => {
     try {
-      setLoading(true)
+      // Only show loading spinner for non-search operations to avoid focus loss
+      if (!debouncedSearchKeywords.trim()) {
+        setLoading(true)
+      }
       
       // Build URL with tag filters if any are selected
       let url = 'http://localhost:8080/api/get-bookmarks'
@@ -128,8 +135,8 @@ function Bookmarks() {
       }
       
       // Add keyword search if provided
-      if (searchKeywords.trim()) {
-        params.append('keywords', searchKeywords.trim())
+      if (debouncedSearchKeywords.trim()) {
+        params.append('keywords', debouncedSearchKeywords.trim())
       }
       
       if (params.toString()) {
@@ -151,7 +158,32 @@ function Bookmarks() {
     } finally {
       setLoading(false)
     }
-  }, [selectedTags, filterMode, tags, searchKeywords])
+  }, [selectedTags, filterMode, tags, debouncedSearchKeywords])
+
+  // Fetch bookmarks when filters change (but only after initial load)
+  useEffect(() => {
+    if (isInitialized) {
+      fetchBookmarks()
+    }
+  }, [debouncedSelectedTags, debouncedFilterMode, debouncedSearchKeywords, isInitialized, fetchBookmarks])
+
+  const fetchTags = useCallback(async () => {
+    try {
+      setTagsLoading(true)
+      const response = await fetch('http://localhost:8080/api/get-tags')
+      const data = await response.json()
+      
+      if (data.success) {
+        setTags(data.data || [])
+      } else {
+        console.error('Failed to fetch tags:', data.message)
+      }
+    } catch (err) {
+      console.error('Error fetching tags:', err)
+    } finally {
+      setTagsLoading(false)
+    }
+  }, [])
 
   const createBookmark = async (e) => {
     e.preventDefault()
@@ -309,6 +341,16 @@ function Bookmarks() {
     }
   }
 
+  // Handle search input changes with focus preservation
+  const handleSearchChange = useCallback((e) => {
+    setSearchKeywords(e.target.value)
+  }, [])
+
+  // Handle clear search
+  const handleClearSearch = useCallback(() => {
+    setSearchKeywords('')
+  }, [])
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -357,7 +399,7 @@ function Bookmarks() {
   }
 
   // Toggle tag selection for filtering
-  const toggleTagFilter = (tagName) => {
+  const toggleTagFilter = useCallback((tagName) => {
     setSelectedTags(prev => {
       if (prev.includes(tagName)) {
         // Remove tag from selection
@@ -367,10 +409,10 @@ function Bookmarks() {
         return [...prev, tagName]
       }
     })
-  }
+  }, [])
 
   // Clear all tag filters
-  const clearTagFilters = () => {
+  const clearTagFilters = useCallback(() => {
     if (filterMode === 'exclude') {
       // In exclude mode, "clear filters" means select all tags (exclude none)
       const allTagNames = tags.map(tagString => tagString.split(',')[0])
@@ -379,10 +421,10 @@ function Bookmarks() {
       // In include mode, clear all selections
       setSelectedTags([])
     }
-  }
+  }, [filterMode, tags])
 
   // Toggle filter mode between include and exclude
-  const toggleFilterMode = () => {
+  const toggleFilterMode = useCallback(() => {
     setFilterMode(prev => {
       const newMode = prev === 'include' ? 'exclude' : 'include'
       
@@ -397,7 +439,7 @@ function Bookmarks() {
       
       return newMode
     })
-  }
+  }, [tags])
 
   if (loading) {
     return (
@@ -515,26 +557,11 @@ function Bookmarks() {
       )}
 
       {/* Search section */}
-      <div className="search-section">
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="Search bookmarks by title, URL, or tags..."
-            value={searchKeywords}
-            onChange={(e) => setSearchKeywords(e.target.value)}
-            className="search-input"
-          />
-          {searchKeywords && (
-            <button 
-              className="clear-search-button"
-              onClick={() => setSearchKeywords('')}
-              title="Clear search"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
+      <SearchInput 
+        searchKeywords={searchKeywords}
+        onSearchChange={handleSearchChange}
+        onClearSearch={handleClearSearch}
+      />
 
       {bookmarks.length === 0 ? (
         <div className="empty-state">
