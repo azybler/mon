@@ -431,7 +431,7 @@ function Bookmarks() {
           {bookmarks.map((bookmark) => (
             <div key={bookmark.id} className="bookmark-card">
               <div className="bookmark-header">
-                <h3 className="bookmark-title">{bookmark.title}</h3>
+                <h3 className="bookmark-title" onClick={() => openBookmark(bookmark.url)}>{bookmark.title}</h3>
                 <div className="bookmark-actions">
                   <button 
                     className="bookmark-edit"
@@ -446,13 +446,6 @@ function Bookmarks() {
                     title="Delete bookmark"
                   >
                     🗑️
-                  </button>
-                  <button 
-                    className="bookmark-link"
-                    onClick={() => openBookmark(bookmark.url)}
-                    title="Open bookmark"
-                  >
-                    ↗
                   </button>
                 </div>
               </div>
