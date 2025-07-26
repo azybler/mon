@@ -5,7 +5,7 @@
   flex-direction: column;
 }
 
-/* Header Styles */
+/* Header Styles - Always Dark */
 .app-header {
   background-color: #1a1a1a;
   border-bottom: 1px solid #333;
@@ -23,7 +23,7 @@
   padding: 0.2rem 0 0.1rem;
 }
 
-/* Logo Styles */
+/* Logo Styles - Always Dark */
 .logo-container {
   cursor: pointer;
   margin-right: 2rem;
@@ -42,7 +42,7 @@
   letter-spacing: -0.02em;
 }
 
-/* Navigation Styles */
+/* Navigation Styles - Always Dark */
 .primary-nav {
   flex: 1;
 }
@@ -81,13 +81,15 @@
   color: #333;
 }
 
-/* Main Content */
+/* Main Content - Uses Theme Colors */
 .main-content {
   flex: 1;
   padding: 0.8rem;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+  background-color: var(--content-bg);
+  color: var(--content-text);
 }
 
 /* Welcome Section */
@@ -104,7 +106,7 @@
 
 .welcome-section p {
   font-size: 1rem;
-  color: #888;
+  color: var(--content-text-secondary);
   margin-bottom: 2rem;
   max-width: 600px;
   margin-left: auto;
@@ -119,8 +121,8 @@
 }
 
 .stat-card {
-  background-color: #1a1a1a;
-  border: 1px solid #333;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 6px;
   padding: 1rem;
   text-align: center;
@@ -129,18 +131,19 @@
 
 .stat-card:hover {
   transform: translateY(-1px);
-  border-color: #646cff;
+  border-color: var(--card-hover-border);
 }
 
-.stat-card h3 {
+.stat-card h3,
+.stat-card h2 {
   margin: 0 0 0.25rem 0;
-  color: #fff;
+  color: var(--content-text);
   font-size: 0.9rem;
 }
 
 .stat-card p {
   margin: 0;
-  color: #888;
+  color: var(--content-text-secondary);
   font-size: 1.3rem;
   font-weight: 600;
 }
@@ -154,11 +157,12 @@
   font-size: 2rem;
   margin-top: 0;
   margin-bottom: 0.5rem;
+  color: var(--content-text);
 }
 
 .section-content p {
   font-size: 0.9rem;
-  color: #888;
+  color: var(--content-text-secondary);
   margin-bottom: 0;
 }
 
@@ -269,10 +273,11 @@
   align-items: center;
   margin-bottom: 1rem;
   gap: 1.5rem;
+  color: var(--content-text);
 }
 
 .add-bookmark-button {
-  background-color: #646cff;
+  background-color: #4c4fc5;
   color: white;
   border: none;
   padding: 0.6rem 1.2rem;
@@ -285,7 +290,7 @@
 }
 
 .add-bookmark-button:hover {
-  background-color: #5a5fcf;
+  background-color: #3d42a8;
   transform: translateY(-1px);
 }
 
@@ -310,14 +315,14 @@
 .empty-state {
   text-align: center;
   padding: 2rem;
-  background-color: #1a1a1a;
-  border: 1px solid #333;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 6px;
   border-style: dashed;
 }
 
 .empty-state p {
-  color: #888;
+  color: var(--content-text-secondary);
   font-style: italic;
   font-size: 0.9rem;
   margin-bottom: 1rem;
@@ -326,14 +331,14 @@
 .error-message {
   text-align: center;
   padding: 1.5rem;
-  background-color: #2a1a1a;
-  border: 1px solid #663333;
+  background-color: var(--card-bg);
+  border: 1px solid var(--danger-color);
   border-radius: 6px;
   margin-top: 1rem;
 }
 
 .error-message p {
-  color: #ff6b6b;
+  color: var(--danger-color);
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
@@ -361,8 +366,8 @@
 }
 
 .bookmark-card {
-  background-color: #1a1a1a;
-  border: 1px solid #333;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 6px;
   padding: 0.5rem;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
@@ -373,7 +378,7 @@
 
 .bookmark-card:hover {
   transform: translateY(-1px);
-  border-color: #646cff;
+  border-color: var(--card-hover-border);
   box-shadow: 0 2px 8px rgba(100, 108, 255, 0.1);
 }
 
@@ -385,7 +390,7 @@
 }
 
 .bookmark-title {
-  color: #fff;
+  color: var(--content-text);
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
@@ -403,8 +408,8 @@
 .bookmark-edit,
 .bookmark-delete {
   background: none;
-  border: 1px solid #555;
-  color: #ccc;
+  border: 1px solid var(--content-border);
+  color: var(--content-text-secondary);
   width: 28px;
   height: 28px;
   border-radius: 4px;
@@ -419,7 +424,7 @@
 .bookmark-edit:hover,
 .bookmark-delete:hover {
   border-color: #646cff;
-  color: #fff;
+  color: var(--content-text);
   transform: scale(1.05);
 }
 
@@ -438,7 +443,7 @@
 }
 
 .bookmark-url a {
-  color: #888;
+  color: var(--content-text-secondary);
   text-decoration: none;
   font-size: 0.7rem;
   cursor: default;
@@ -456,12 +461,12 @@
 }
 
 .bookmark-tag {
-  background-color: #333;
-  color: #ccc;
+  background-color: var(--bg-tertiary);
+  color: var(--content-text-secondary);
   padding: 0.2rem 0.4rem;
   border-radius: 8px;
   font-size: 0.7rem;
-  border: 1px solid #555;
+  border: 1px solid var(--content-border);
 }
 
 /* Modal Styles */
@@ -480,8 +485,8 @@
 }
 
 .modal-content {
-  background-color: #1a1a1a;
-  border: 1px solid #333;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   max-width: 550px;
   width: 100%;
@@ -500,14 +505,14 @@
 
 .modal-header h3 {
   margin: 0;
-  color: #fff;
+  color: var(--content-text);
   font-size: 1.1rem;
 }
 
 .modal-close {
   background: none;
   border: none;
-  color: #888;
+  color: var(--content-text-secondary);
   font-size: 1.3rem;
   cursor: pointer;
   padding: 0.2rem;
@@ -521,8 +526,8 @@
 }
 
 .modal-close:hover {
-  background-color: #333;
-  color: #fff;
+  background-color: var(--bg-tertiary);
+  color: var(--content-text);
 }
 
 .bookmark-form {
@@ -535,7 +540,7 @@
 
 .form-group label {
   display: block;
-  color: #fff;
+  color: var(--content-text);
   font-weight: 600;
   margin-bottom: 0.4rem;
   font-size: 0.8rem;
@@ -544,10 +549,10 @@
 .form-group input {
   width: 100%;
   padding: 0.6rem;
-  background-color: #2a2a2a;
-  border: 1px solid #555;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 4px;
-  color: #fff;
+  color: var(--content-text);
   font-size: 0.8rem;
   transition: border-color 0.2s ease;
   box-sizing: border-box;
@@ -559,12 +564,12 @@
 }
 
 .form-group input::placeholder {
-  color: #888;
+  color: var(--content-text-secondary);
 }
 
 .form-group small {
   display: block;
-  color: #888;
+  color: var(--content-text-secondary);
   font-size: 0.7rem;
   margin-top: 0.2rem;
 }
@@ -578,10 +583,10 @@
 .tags-input {
   flex: 1;
   padding: 0.6rem;
-  background-color: #2a2a2a;
-  border: 1px solid #555;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 4px;
-  color: #fff;
+  color: var(--content-text);
   font-size: 0.8rem;
   transition: border-color 0.2s ease;
   box-sizing: border-box;
@@ -593,13 +598,13 @@
 }
 
 .tags-input::placeholder {
-  color: #888;
+  color: var(--content-text-secondary);
 }
 
 .ai-button {
-  background-color: #2a2a2a;
-  border: 1px solid #555;
-  color: #ccc;
+  background-color: var(--button-bg);
+  border: 1px solid var(--button-border);
+  color: var(--button-text);
   padding: 0.6rem;
   border-radius: 4px;
   cursor: pointer;
@@ -632,8 +637,8 @@
 
 .cancel-button {
   background: none;
-  border: 1px solid #555;
-  color: #ccc;
+  border: 1px solid var(--button-border);
+  color: var(--button-text);
   padding: 0.6rem 1.2rem;
   border-radius: 4px;
   cursor: pointer;
@@ -642,9 +647,9 @@
 }
 
 .cancel-button:hover:not(:disabled) {
-  background-color: #333;
-  border-color: #777;
-  color: #fff;
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-hover);
+  color: var(--content-text);
 }
 
 .save-button {
@@ -671,8 +676,8 @@
 
 /* Settings Styles */
 .settings-section {
-  background-color: #1a1a1a;
-  border: 1px solid #333;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 6px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -680,12 +685,12 @@
 
 .settings-section h3 {
   margin: 0 0 0.5rem 0;
-  color: #fff;
+  color: var(--content-text);
   font-size: 1.1rem;
 }
 
 .settings-description {
-  color: #888;
+  color: var(--content-text-secondary);
   font-size: 0.9rem;
   margin-bottom: 1.5rem;
 }
@@ -700,10 +705,10 @@
 .settings-textarea {
   width: 100%;
   padding: 0.6rem;
-  background-color: #2a2a2a;
-  border: 1px solid #555;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 4px;
-  color: #fff;
+  color: var(--content-text);
   font-size: 0.8rem;
   transition: border-color 0.2s ease;
   box-sizing: border-box;
@@ -718,7 +723,7 @@
 
 .settings-input::placeholder,
 .settings-textarea::placeholder {
-  color: #888;
+  color: var(--content-text-secondary);
 }
 
 .settings-textarea {
@@ -732,13 +737,13 @@
   justify-content: flex-end;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--content-border);
 }
 
 .reset-button {
   background: none;
-  border: 1px solid #555;
-  color: #ccc;
+  border: 1px solid var(--button-border);
+  color: var(--button-text);
   padding: 0.6rem 1.2rem;
   border-radius: 4px;
   cursor: pointer;
@@ -747,9 +752,9 @@
 }
 
 .reset-button:hover {
-  background-color: #333;
-  border-color: #777;
-  color: #fff;
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-hover);
+  color: var(--content-text);
 }
 
 .settings-form .form-group small a {
@@ -761,12 +766,47 @@
   text-decoration: underline;
 }
 
+/* Theme Toggle Styles */
+.theme-toggle-container {
+  display: flex;
+  align-items: center;
+}
+
+.theme-toggle-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--button-bg);
+  border: 1px solid var(--button-border);
+  color: var(--button-text);
+  padding: 0.6rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-button:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-hover);
+  color: var(--content-text);
+  transform: translateY(-1px);
+}
+
+.theme-icon {
+  font-size: 1rem;
+}
+
+.theme-text {
+  font-weight: 500;
+}
+
 /* Tags Section Styles */
 .tags-section {
   margin: 1rem 0;
   padding: 0.5rem;
-  background-color: #1a1a1a;
-  border: 1px solid #333;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 6px;
 }
 
@@ -778,9 +818,10 @@
   gap: 1rem;
 }
 
-.tags-header h3 {
+.tags-header h3,
+.tags-header h4 {
   margin: 0;
-  color: #fff;
+  color: var(--content-text);
   font-size: 1rem;
   font-weight: 600;
 }
@@ -797,7 +838,7 @@
   gap: 0.5rem;
   cursor: pointer;
   font-size: 0.8rem;
-  color: #ccc;
+  color: var(--content-text-secondary);
   user-select: none;
 }
 
@@ -815,7 +856,7 @@
 }
 
 .filter-mode-toggle:hover .toggle-text {
-  color: #fff;
+  color: var(--content-text);
 }
 
 .clear-filters-button {
@@ -843,9 +884,9 @@
 }
 
 .tag-filter {
-  background-color: #2a2a2a;
-  color: #ccc;
-  border: 1px solid #555;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--button-border);
   padding: 0.4rem 0.8rem;
   border-radius: 16px;
   font-size: 0.8rem;
@@ -876,7 +917,7 @@
 }
 
 .tag-count {
-  color: #888;
+  color: var(--content-text-secondary);
   font-weight: 600;
   font-size: 0.75rem;
 }
@@ -887,7 +928,7 @@
 }
 
 .filter-indicator {
-  color: #888;
+  color: var(--content-text-secondary);
   font-style: italic;
   font-weight: normal;
 }

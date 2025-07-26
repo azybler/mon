@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useTheme } from '../contexts/ThemeContext'
 
 function Settings() {
+  const { theme, toggleTheme } = useTheme()
   const [aiConfig, setAiConfig] = useState({
     apiKey: '',
     model: 'deepseek/deepseek-chat-v3-0324:free',
@@ -53,6 +55,36 @@ function Settings() {
   return (
     <div className="section-content">
       <h2>Settings</h2>
+      
+      <div className="settings-section">
+        <h3>Appearance</h3>
+        <p className="settings-description">
+          Customize the appearance of the application.
+        </p>
+        
+        <div className="settings-form">
+          <div className="form-group">
+            <label htmlFor="theme">Theme</label>
+            <div className="theme-toggle-container">
+              <button
+                type="button"
+                className="theme-toggle-button"
+                onClick={toggleTheme}
+              >
+                <span className="theme-icon">
+                  {theme === 'light' ? '🌙' : '☀️'}
+                </span>
+                <span className="theme-text">
+                  {theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+                </span>
+              </button>
+            </div>
+            <small>
+              Current theme: {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
+            </small>
+          </div>
+        </div>
+      </div>
       
       <div className="settings-section">
         <h3>AI Tag Suggestions</h3>

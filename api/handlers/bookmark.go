@@ -1,14 +1,44 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
+	jsoniter "github.com/json-iterator/go"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
+// Pre-compiled common error responses to reduce allocations
+var (
+	invalidJSONResponse = BookmarkResponse{
+		Success: false,
+		Message: "Invalid JSON format",
+	}
+	titleRequiredResponse = BookmarkResponse{
+		Success: false,
+		Message: "Title is required",
+	}
+	urlRequiredResponse = BookmarkResponse{
+		Success: false,
+		Message: "URL is required",
+	}
+	methodNotAllowedMsg = "Method not allowed"
+)
+
+// Helper functions for JSON encoding/decoding with better performance
+func writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	return json.NewEncoder(w).Encode(data)
+}
+
+func readJSONRequest(r *http.Request, dest interface{}) error {
+	return json.NewDecoder(r.Body).Decode(dest)
+}
 
 type Bookmark struct {
 	ID        string    `json:"id"`
@@ -140,7 +170,7 @@ func (h *BookmarkHandler) rebuildTagCounts() error {
 		tagCounts := make(map[string]int)
 
 		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
+		opts.PrefetchSize = 50 // Increase prefetch size for better performance
 		it := txn.NewIterator(opts)
 		defer it.Close()
 
@@ -149,7 +179,7 @@ func (h *BookmarkHandler) rebuildTagCounts() error {
 			key := item.Key()
 
 			// Only process keys that start with "bookmark_"
-			if string(key[:min(len(key), 9)]) == "bookmark_" {
+			if len(key) >= 9 && string(key[:9]) == "bookmark_" {
 				err := item.Value(func(val []byte) error {
 					var bookmark Bookmark
 					if err := json.Unmarshal(val, &bookmark); err != nil {
@@ -190,15 +220,14 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 	// Set content type to JSON
 	w.Header().Set("Content-Type", "application/json")
 
-	// Parse JSON request body
+	// Parse JSON request body using helper function
 	var req NewBookmarkRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := readJSONRequest(r, &req); err != nil {
 		response := BookmarkResponse{
 			Success: false,
 			Message: "Invalid JSON format",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -209,7 +238,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 			Message: "Title is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -219,7 +248,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 			Message: "URL is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -250,7 +279,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 			Message: "Error serializing bookmark data",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -264,7 +293,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 			Message: "Error saving bookmark to database",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -282,7 +311,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	writeJSONResponse(w, http.StatusOK, response)
 }
 
 func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
@@ -323,10 +352,13 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 
 	var bookmarks []Bookmark
 
+	// Pre-allocate slice with estimated capacity to reduce allocations
+	bookmarks = make([]Bookmark, 0, 100)
+
 	// Read all bookmarks from BadgerDB
 	err := h.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
+		opts.PrefetchSize = 50 // Increase prefetch size for better performance
 		it := txn.NewIterator(opts)
 		defer it.Close()
 
@@ -335,7 +367,7 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 			key := item.Key()
 
 			// Only process keys that start with "bookmark_"
-			if string(key[:min(len(key), 9)]) == "bookmark_" {
+			if len(key) >= 9 && string(key[:9]) == "bookmark_" {
 				err := item.Value(func(val []byte) error {
 					var bookmark Bookmark
 					if err := json.Unmarshal(val, &bookmark); err != nil {
@@ -402,7 +434,7 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 			Count:   0,
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -414,7 +446,7 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 		Count:   len(bookmarks),
 	}
 
-	json.NewEncoder(w).Encode(response)
+	writeJSONResponse(w, http.StatusOK, response)
 }
 
 func (h *BookmarkHandler) GetTags(w http.ResponseWriter, r *http.Request) {
@@ -464,7 +496,7 @@ func (h *BookmarkHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 			Count:   0,
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -481,7 +513,7 @@ func (h *BookmarkHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 		Count:   len(tags),
 	}
 
-	json.NewEncoder(w).Encode(response)
+	writeJSONResponse(w, http.StatusOK, response)
 }
 
 func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request) {
@@ -504,7 +536,7 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 			Message: "Bookmark ID is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -533,7 +565,7 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 				Message: "Bookmark not found",
 			}
 			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(response)
+			writeJSONResponse(w, http.StatusOK, response)
 			return
 		}
 
@@ -542,7 +574,7 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 			Message: "Error reading bookmark from database",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -557,7 +589,7 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 			Message: "Error deleting bookmark from database",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -573,7 +605,7 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 		Message: "Bookmark deleted successfully",
 	}
 
-	json.NewEncoder(w).Encode(response)
+	writeJSONResponse(w, http.StatusOK, response)
 }
 
 func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
@@ -596,19 +628,18 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 			Message: "Bookmark ID is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
 	// Parse JSON request body
 	var req EditBookmarkRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := readJSONRequest(r, &req); err != nil {
 		response := BookmarkResponse{
 			Success: false,
 			Message: "Invalid JSON format",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -619,7 +650,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 			Message: "Title is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -629,7 +660,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 			Message: "URL is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -687,7 +718,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 				Message: "Bookmark not found",
 			}
 			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(response)
+			writeJSONResponse(w, http.StatusOK, response)
 			return
 		}
 
@@ -696,7 +727,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 			Message: "Error updating bookmark in database",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
@@ -713,5 +744,5 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 		Data:    updatedBookmark,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	writeJSONResponse(w, http.StatusOK, response)
 }

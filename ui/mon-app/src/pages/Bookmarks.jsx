@@ -1,4 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+
+// Debounce hook for performance optimization
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
 
 function Bookmarks() {
   const [bookmarks, setBookmarks] = useState([])
@@ -12,23 +29,65 @@ function Bookmarks() {
   const [editingBookmark, setEditingBookmark] = useState(null)
   const [saving, setSaving] = useState(false)
   const [generatingTags, setGeneratingTags] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     url: '',
     tags: ''
   })
 
+  // Debounce filter changes to prevent excessive API calls
+  const debouncedSelectedTags = useDebounce(selectedTags, 300)
+  const debouncedFilterMode = useDebounce(filterMode, 300)
+
+  // Initial data fetch - only runs once
   useEffect(() => {
-    fetchBookmarks()
-    fetchTags()
+    const initializeData = async () => {
+      try {
+        // Fetch both tags and bookmarks in parallel
+        const [tagsResponse, bookmarksResponse] = await Promise.all([
+          fetch('http://localhost:8080/api/get-tags'),
+          fetch('http://localhost:8080/api/get-bookmarks')
+        ])
+        
+        const [tagsData, bookmarksData] = await Promise.all([
+          tagsResponse.json(),
+          bookmarksResponse.json()
+        ])
+        
+        if (tagsData.success) {
+          setTags(tagsData.data || [])
+        } else {
+          console.error('Failed to fetch tags:', tagsData.message)
+        }
+        
+        if (bookmarksData.success) {
+          setBookmarks(bookmarksData.data || [])
+          setError(null)
+        } else {
+          setError(bookmarksData.message || 'Failed to fetch bookmarks')
+        }
+      } catch (err) {
+        setError('Error connecting to the server')
+        console.error('Error fetching initial data:', err)
+      } finally {
+        setLoading(false)
+        setTagsLoading(false)
+        setIsInitialized(true)
+      }
+    }
+    
+    initializeData()
   }, [])
 
-  // Fetch bookmarks whenever selectedTags or filterMode change
+  // Fetch bookmarks when filters change (but only after initial load)
   useEffect(() => {
-    fetchBookmarks()
-  }, [selectedTags, filterMode])
+    if (isInitialized) {
+      fetchBookmarks()
+    }
+  }, [debouncedSelectedTags, debouncedFilterMode, isInitialized])
 
-  const fetchTags = async () => {
+  const fetchTags = useCallback(async () => {
     try {
       setTagsLoading(true)
       const response = await fetch('http://localhost:8080/api/get-tags')
@@ -44,9 +103,9 @@ function Bookmarks() {
     } finally {
       setTagsLoading(false)
     }
-  }
+  }, [])
 
-  const fetchBookmarks = async () => {
+  const fetchBookmarks = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -57,7 +116,7 @@ function Bookmarks() {
         // Include mode: send selected tags to show bookmarks with any of these tags
         const tagParams = selectedTags.join(',')
         url += `?tags=${encodeURIComponent(tagParams)}`
-      } else if (filterMode === 'exclude') {
+      } else if (filterMode === 'exclude' && tags.length > 0) {
         // Exclude mode: send unselected tags to exclude bookmarks with these tags
         const allTagNames = tags.map(tagString => tagString.split(',')[0])
         const unselectedTags = allTagNames.filter(tag => !selectedTags.includes(tag))
@@ -82,7 +141,7 @@ function Bookmarks() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedTags, filterMode, tags])
 
   const createBookmark = async (e) => {
     e.preventDefault()
@@ -126,9 +185,30 @@ function Bookmarks() {
         setFormData({ title: '', url: '', tags: '' })
         setEditingBookmark(null)
         setShowModal(false)
-        // Refresh bookmarks list and tags
-        fetchBookmarks()
-        fetchTags()
+        
+        // Optimistically update the UI without refetching everything
+        if (editingBookmark) {
+          // Update existing bookmark in state
+          setBookmarks(prev => prev.map(b => 
+            b.id === editingBookmark.id ? data.data : b
+          ))
+        } else {
+          // Add new bookmark to state
+          setBookmarks(prev => [data.data, ...prev])
+        }
+        
+        // Only refetch tags if we added/changed tags
+        const newTags = formData.tags
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag.length > 0)
+        
+        const oldTags = editingBookmark?.tags || []
+        const tagsChanged = JSON.stringify(newTags.sort()) !== JSON.stringify(oldTags.sort())
+        
+        if (tagsChanged) {
+          fetchTags()
+        }
       } else {
         alert(data.message || `Failed to ${editingBookmark ? 'update' : 'create'} bookmark`)
       }
@@ -249,9 +329,13 @@ function Bookmarks() {
       const data = await response.json()
       
       if (data.success) {
-        // Refresh bookmarks list and tags
-        fetchBookmarks()
-        fetchTags()
+        // Optimistically remove bookmark from state
+        setBookmarks(prev => prev.filter(b => b.id !== bookmark.id))
+        
+        // Only refetch tags if the deleted bookmark had tags
+        if (bookmark.tags && bookmark.tags.length > 0) {
+          fetchTags()
+        }
       } else {
         alert(data.message || 'Failed to delete bookmark')
       }
@@ -431,7 +515,7 @@ function Bookmarks() {
           {bookmarks.map((bookmark) => (
             <div key={bookmark.id} className="bookmark-card">
               <div className="bookmark-header">
-                <h3 className="bookmark-title" onClick={() => openBookmark(bookmark.url)}>{bookmark.title}</h3>
+                <h4 className="bookmark-title" onClick={() => openBookmark(bookmark.url)}>{bookmark.title}</h4>
                 <div className="bookmark-actions">
                   <button 
                     className="bookmark-edit"

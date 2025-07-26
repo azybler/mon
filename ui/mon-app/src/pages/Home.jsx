@@ -5,15 +5,15 @@ function Home() {
       <p>Your personal organization hub. Choose a section from the navigation above to get started.</p>
       <div className="quick-stats">
         <div className="stat-card">
-          <h3>Bookmarks</h3>
+          <h2>Bookmarks</h2>
           <p>0 saved</p>
         </div>
         <div className="stat-card">
-          <h3>Todo Items</h3>
+          <h2>Todo Items</h2>
           <p>0 pending</p>
         </div>
         <div className="stat-card">
-          <h3>Watch Lists</h3>
+          <h2>Watch Lists</h2>
           <p>0 items</p>
         </div>
       </div>
