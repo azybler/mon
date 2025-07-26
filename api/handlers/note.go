@@ -7,119 +7,104 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
-	jsoniter "github.com/json-iterator/go"
 )
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Pre-compiled common error responses to reduce allocations
 var (
-	invalidJSONResponse = BookmarkResponse{
+	invalidJSONResponseNote = NoteResponse{
 		Success: false,
 		Message: "Invalid JSON format",
 	}
-	titleRequiredResponse = BookmarkResponse{
+	titleRequiredResponseNote = NoteResponse{
 		Success: false,
 		Message: "Title is required",
 	}
-	urlRequiredResponse = BookmarkResponse{
+	descriptionRequiredResponse = NoteResponse{
 		Success: false,
-		Message: "URL is required",
+		Message: "Description is required",
 	}
-	methodNotAllowedMsg = "Method not allowed"
 )
 
-// Helper functions for JSON encoding/decoding with better performance
-func writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	return json.NewEncoder(w).Encode(data)
+type Note struct {
+	ID          string    `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Tags        []string  `json:"tags"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func readJSONRequest(r *http.Request, dest interface{}) error {
-	return json.NewDecoder(r.Body).Decode(dest)
+type NewNoteRequest struct {
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Tags        []string `json:"tags"`
 }
 
-type Bookmark struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`
-	URL       string    `json:"url"`
-	Tags      []string  `json:"tags"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+type EditNoteRequest struct {
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Tags        []string `json:"tags"`
 }
 
-type NewBookmarkRequest struct {
-	Title string   `json:"title"`
-	URL   string   `json:"url"`
-	Tags  []string `json:"tags"`
+type NoteResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    Note   `json:"data,omitempty"`
 }
 
-type EditBookmarkRequest struct {
-	Title string   `json:"title"`
-	URL   string   `json:"url"`
-	Tags  []string `json:"tags"`
+type NotesListResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    []Note `json:"data,omitempty"`
+	Count   int    `json:"count"`
 }
 
-type BookmarkResponse struct {
-	Success bool     `json:"success"`
-	Message string   `json:"message"`
-	Data    Bookmark `json:"data,omitempty"`
-}
-
-type BookmarksListResponse struct {
-	Success bool       `json:"success"`
-	Message string     `json:"message"`
-	Data    []Bookmark `json:"data,omitempty"`
-	Count   int        `json:"count"`
-}
-
-type DeleteBookmarkResponse struct {
+type DeleteNoteResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
 
-type TagsResponse struct {
+type NoteTagsResponse struct {
 	Success bool     `json:"success"`
 	Message string   `json:"message"`
 	Data    []string `json:"data,omitempty"`
 	Count   int      `json:"count"`
 }
 
-type BookmarkHandler struct {
+type NoteHandler struct {
 	db *badger.DB
 }
 
-func NewBookmarkHandler(db *badger.DB) *BookmarkHandler {
-	handler := &BookmarkHandler{db: db}
+func NewNoteHandler(db *badger.DB) *NoteHandler {
+	handler := &NoteHandler{db: db}
 
 	// Initialize tag counts if they don't exist (for migration)
-	handler.initializeTagCounts()
+	handler.initializeNoteTagCounts()
 
 	return handler
 }
 
-// initializeTagCounts creates the tag_counts key if it doesn't exist
+// initializeNoteTagCounts creates the note_tag_counts key if it doesn't exist
 // This is useful for migrating from the old all_tags system
-func (h *BookmarkHandler) initializeTagCounts() error {
+func (h *NoteHandler) initializeNoteTagCounts() error {
 	return h.db.View(func(txn *badger.Txn) error {
-		// Check if tag_counts already exists
-		_, err := txn.Get([]byte("tag_counts"))
+		// Check if note_tag_counts already exists
+		_, err := txn.Get([]byte("note_tag_counts"))
 		if err == badger.ErrKeyNotFound {
-			// tag_counts doesn't exist, rebuild it
-			return h.rebuildTagCounts()
+			// note_tag_counts doesn't exist, rebuild it
+			return h.rebuildNoteTagCounts()
 		}
 		return err
 	})
 }
 
-// updateTagCounts maintains tag counts for efficient retrieval
-func (h *BookmarkHandler) updateTagCounts(oldTags, newTags []string) error {
+// updateNoteTagCounts maintains tag counts for efficient retrieval
+func (h *NoteHandler) updateNoteTagCounts(oldTags, newTags []string) error {
 	return h.db.Update(func(txn *badger.Txn) error {
 		// Get existing tag counts
 		tagCounts := make(map[string]int)
 
-		item, err := txn.Get([]byte("tag_counts"))
+		item, err := txn.Get([]byte("note_tag_counts"))
 		if err != nil && err != badger.ErrKeyNotFound {
 			return err
 		}
@@ -159,14 +144,14 @@ func (h *BookmarkHandler) updateTagCounts(oldTags, newTags []string) error {
 			return err
 		}
 
-		return txn.Set([]byte("tag_counts"), countsJSON)
+		return txn.Set([]byte("note_tag_counts"), countsJSON)
 	})
 }
 
-// rebuildTagCounts rebuilds the tag_counts key by scanning all existing bookmarks
-func (h *BookmarkHandler) rebuildTagCounts() error {
+// rebuildNoteTagCounts rebuilds the note_tag_counts key by scanning all existing notes
+func (h *NoteHandler) rebuildNoteTagCounts() error {
 	return h.db.Update(func(txn *badger.Txn) error {
-		// Get all tags and their counts from existing bookmarks
+		// Get all tags and their counts from existing notes
 		tagCounts := make(map[string]int)
 
 		opts := badger.DefaultIteratorOptions
@@ -178,16 +163,16 @@ func (h *BookmarkHandler) rebuildTagCounts() error {
 			item := it.Item()
 			key := item.Key()
 
-			// Only process keys that start with "bookmark_"
-			if len(key) >= 9 && string(key[:9]) == "bookmark_" {
+			// Only process keys that start with "note_"
+			if len(key) >= 5 && string(key[:5]) == "note_" {
 				err := item.Value(func(val []byte) error {
-					var bookmark Bookmark
-					if err := json.Unmarshal(val, &bookmark); err != nil {
+					var note Note
+					if err := json.Unmarshal(val, &note); err != nil {
 						// Skip invalid JSON entries
 						return nil
 					}
-					// Count all tags from this bookmark
-					for _, tag := range bookmark.Tags {
+					// Count all tags from this note
+					for _, tag := range note.Tags {
 						if tag != "" {
 							tagCounts[tag]++
 						}
@@ -206,11 +191,11 @@ func (h *BookmarkHandler) rebuildTagCounts() error {
 			return err
 		}
 
-		return txn.Set([]byte("tag_counts"), countsJSON)
+		return txn.Set([]byte("note_tag_counts"), countsJSON)
 	})
 }
 
-func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) NewNote(w http.ResponseWriter, r *http.Request) {
 	// Only allow POST requests
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -221,9 +206,9 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// Parse JSON request body using helper function
-	var req NewBookmarkRequest
+	var req NewNoteRequest
 	if err := readJSONRequest(r, &req); err != nil {
-		response := BookmarkResponse{
+		response := NoteResponse{
 			Success: false,
 			Message: "Invalid JSON format",
 		}
@@ -233,7 +218,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 
 	// Validate required fields
 	if req.Title == "" {
-		response := BookmarkResponse{
+		response := NoteResponse{
 			Success: false,
 			Message: "Title is required",
 		}
@@ -242,10 +227,10 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.URL == "" {
-		response := BookmarkResponse{
+	if req.Description == "" {
+		response := NoteResponse{
 			Success: false,
-			Message: "URL is required",
+			Message: "Description is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSONResponse(w, http.StatusOK, response)
@@ -259,24 +244,24 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 
 	// Generate unique ID (simple timestamp + title hash for now)
 	now := time.Now()
-	bookmarkID := fmt.Sprintf("bookmark_%d", now.UnixNano())
+	noteID := fmt.Sprintf("note_%d", now.UnixNano())
 
-	// Create bookmark object
-	bookmark := Bookmark{
-		ID:        bookmarkID,
-		Title:     req.Title,
-		URL:       req.URL,
-		Tags:      req.Tags,
-		CreatedAt: now,
-		UpdatedAt: now,
+	// Create note object
+	note := Note{
+		ID:          noteID,
+		Title:       req.Title,
+		Description: req.Description,
+		Tags:        req.Tags,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
-	// Serialize bookmark to JSON for storage
-	bookmarkJSON, err := json.Marshal(bookmark)
+	// Serialize note to JSON for storage
+	noteJSON, err := json.Marshal(note)
 	if err != nil {
-		response := BookmarkResponse{
+		response := NoteResponse{
 			Success: false,
-			Message: "Error serializing bookmark data",
+			Message: "Error serializing note data",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSONResponse(w, http.StatusOK, response)
@@ -285,12 +270,12 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 
 	// Store in BadgerDB
 	err = h.db.Update(func(txn *badger.Txn) error {
-		return txn.Set([]byte(bookmarkID), bookmarkJSON)
+		return txn.Set([]byte(noteID), noteJSON)
 	})
 	if err != nil {
-		response := BookmarkResponse{
+		response := NoteResponse{
 			Success: false,
-			Message: "Error saving bookmark to database",
+			Message: "Error saving note to database",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSONResponse(w, http.StatusOK, response)
@@ -298,23 +283,23 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the tag counts
-	if err := h.updateTagCounts([]string{}, bookmark.Tags); err != nil {
-		// Log error but don't fail the request since bookmark was saved
-		fmt.Printf("Warning: Failed to update tag counts: %v\n", err)
+	if err := h.updateNoteTagCounts([]string{}, note.Tags); err != nil {
+		// Log error but don't fail the request since note was saved
+		fmt.Printf("Warning: Failed to update note tag counts: %v\n", err)
 	}
 
 	// Return success response
-	response := BookmarkResponse{
+	response := NoteResponse{
 		Success: true,
-		Message: "Bookmark created successfully",
-		Data:    bookmark,
+		Message: "Note created successfully",
+		Data:    note,
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	writeJSONResponse(w, http.StatusOK, response)
 }
 
-func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 	// Only allow GET requests
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -351,12 +336,12 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var bookmarks []Bookmark
+	var notes []Note
 
 	// Pre-allocate slice with estimated capacity to reduce allocations
-	bookmarks = make([]Bookmark, 0, 100)
+	notes = make([]Note, 0, 100)
 
-	// Read all bookmarks from BadgerDB
+	// Read all notes from BadgerDB
 	err := h.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 50 // Increase prefetch size for better performance
@@ -367,11 +352,11 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 			item := it.Item()
 			key := item.Key()
 
-			// Only process keys that start with "bookmark_"
-			if len(key) >= 9 && string(key[:9]) == "bookmark_" {
+			// Only process keys that start with "note_"
+			if len(key) >= 5 && string(key[:5]) == "note_" {
 				err := item.Value(func(val []byte) error {
-					var bookmark Bookmark
-					if err := json.Unmarshal(val, &bookmark); err != nil {
+					var note Note
+					if err := json.Unmarshal(val, &note); err != nil {
 						// Skip invalid JSON entries
 						return nil
 					}
@@ -380,8 +365,8 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 					if len(filterTags) > 0 {
 						hasAnyTag := false
 						for _, filterTag := range filterTags {
-							for _, bookmarkTag := range bookmark.Tags {
-								if bookmarkTag == filterTag {
+							for _, noteTag := range note.Tags {
+								if noteTag == filterTag {
 									hasAnyTag = true
 									break
 								}
@@ -390,7 +375,7 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 								break
 							}
 						}
-						// Only include bookmark if it has any of the required tags
+						// Only include note if it has any of the required tags
 						if !hasAnyTag {
 							return nil
 						}
@@ -400,8 +385,8 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 					if len(excludeTags) > 0 {
 						hasExcludedTag := false
 						for _, excludeTag := range excludeTags {
-							for _, bookmarkTag := range bookmark.Tags {
-								if bookmarkTag == excludeTag {
+							for _, noteTag := range note.Tags {
+								if noteTag == excludeTag {
 									hasExcludedTag = true
 									break
 								}
@@ -410,7 +395,7 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 								break
 							}
 						}
-						// Exclude bookmark if it has any of the excluded tags
+						// Exclude note if it has any of the excluded tags
 						if hasExcludedTag {
 							return nil
 						}
@@ -421,8 +406,8 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 						// Split keywords into individual words and normalize
 						keywordWords := strings.Fields(strings.ToLower(keywords))
 						if len(keywordWords) > 0 {
-							// Create searchable text by combining title, URL, and tags
-							searchableText := strings.ToLower(bookmark.Title + " " + bookmark.URL + " " + strings.Join(bookmark.Tags, " "))
+							// Create searchable text by combining title, description, and tags
+							searchableText := strings.ToLower(note.Title + " " + note.Description + " " + strings.Join(note.Tags, " "))
 
 							// Separate include and exclude words
 							var includeWords []string
@@ -441,7 +426,7 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 							// Check if any exclude words are present
 							for _, excludeWord := range excludeWords {
 								if strings.Contains(searchableText, excludeWord) {
-									// Exclude this bookmark if it contains any exclude word
+									// Exclude this note if it contains any exclude word
 									return nil
 								}
 							}
@@ -456,7 +441,7 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 									}
 								}
 
-								// Only include bookmark if all include words are found
+								// Only include note if all include words are found
 								if !allIncludeWordsMatch {
 									return nil
 								}
@@ -464,7 +449,7 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 
-					bookmarks = append(bookmarks, bookmark)
+					notes = append(notes, note)
 					return nil
 				})
 				if err != nil {
@@ -476,10 +461,10 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		response := BookmarksListResponse{
+		response := NotesListResponse{
 			Success: false,
-			Message: "Error reading bookmarks from database",
-			Data:    []Bookmark{},
+			Message: "Error reading notes from database",
+			Data:    []Note{},
 			Count:   0,
 		}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -488,17 +473,17 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return success response
-	response := BookmarksListResponse{
+	response := NotesListResponse{
 		Success: true,
-		Message: "Bookmarks retrieved successfully",
-		Data:    bookmarks,
-		Count:   len(bookmarks),
+		Message: "Notes retrieved successfully",
+		Data:    notes,
+		Count:   len(notes),
 	}
 
 	writeJSONResponse(w, http.StatusOK, response)
 }
 
-func (h *BookmarkHandler) GetBookmarkTags(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) GetNoteTags(w http.ResponseWriter, r *http.Request) {
 	// Only allow GET requests
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -512,7 +497,7 @@ func (h *BookmarkHandler) GetBookmarkTags(w http.ResponseWriter, r *http.Request
 
 	// Read tag counts from BadgerDB
 	err := h.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte("tag_counts"))
+		item, err := txn.Get([]byte("note_tag_counts"))
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
 				// No tags exist yet, return empty list
@@ -538,9 +523,9 @@ func (h *BookmarkHandler) GetBookmarkTags(w http.ResponseWriter, r *http.Request
 	})
 
 	if err != nil {
-		response := TagsResponse{
+		response := NoteTagsResponse{
 			Success: false,
-			Message: "Error reading tags from database",
+			Message: "Error reading note tags from database",
 			Data:    []string{},
 			Count:   0,
 		}
@@ -555,9 +540,9 @@ func (h *BookmarkHandler) GetBookmarkTags(w http.ResponseWriter, r *http.Request
 	}
 
 	// Return success response
-	response := TagsResponse{
+	response := NoteTagsResponse{
 		Success: true,
-		Message: "Tags retrieved successfully",
+		Message: "Note tags retrieved successfully",
 		Data:    tags,
 		Count:   len(tags),
 	}
@@ -565,7 +550,7 @@ func (h *BookmarkHandler) GetBookmarkTags(w http.ResponseWriter, r *http.Request
 	writeJSONResponse(w, http.StatusOK, response)
 }
 
-func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) DeleteNote(w http.ResponseWriter, r *http.Request) {
 	// Only allow DELETE requests
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -575,89 +560,89 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 	// Set content type to JSON
 	w.Header().Set("Content-Type", "application/json")
 
-	// Get bookmark ID from URL path
-	// Expected format: /api/delete-bookmark/{id}
-	bookmarkID := r.URL.Path[len("/api/delete-bookmark/"):]
+	// Get note ID from URL path
+	// Expected format: /api/delete-note/{id}
+	noteID := r.URL.Path[len("/api/delete-note/"):]
 
-	if bookmarkID == "" {
-		response := DeleteBookmarkResponse{
+	if noteID == "" {
+		response := DeleteNoteResponse{
 			Success: false,
-			Message: "Bookmark ID is required",
+			Message: "Note ID is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
-	// Get the bookmark first to retrieve its tags for count updates
+	// Get the note first to retrieve its tags for count updates
 	var deletedTags []string
 	err := h.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(bookmarkID))
+		item, err := txn.Get([]byte(noteID))
 		if err != nil {
 			return err
 		}
 
 		return item.Value(func(val []byte) error {
-			var bookmark Bookmark
-			if err := json.Unmarshal(val, &bookmark); err != nil {
+			var note Note
+			if err := json.Unmarshal(val, &note); err != nil {
 				return err
 			}
-			deletedTags = bookmark.Tags
+			deletedTags = note.Tags
 			return nil
 		})
 	})
 
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			response := DeleteBookmarkResponse{
+			response := DeleteNoteResponse{
 				Success: false,
-				Message: "Bookmark not found",
+				Message: "Note not found",
 			}
 			w.WriteHeader(http.StatusNotFound)
 			writeJSONResponse(w, http.StatusOK, response)
 			return
 		}
 
-		response := DeleteBookmarkResponse{
+		response := DeleteNoteResponse{
 			Success: false,
-			Message: "Error reading bookmark from database",
+			Message: "Error reading note from database",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
-	// Delete the bookmark
+	// Delete the note
 	err = h.db.Update(func(txn *badger.Txn) error {
-		return txn.Delete([]byte(bookmarkID))
+		return txn.Delete([]byte(noteID))
 	})
 
 	if err != nil {
-		response := DeleteBookmarkResponse{
+		response := DeleteNoteResponse{
 			Success: false,
-			Message: "Error deleting bookmark from database",
+			Message: "Error deleting note from database",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSONResponse(w, http.StatusOK, response)
 		return
 	}
 
-	// Update tag counts by removing the deleted bookmark's tags
-	if err := h.updateTagCounts(deletedTags, []string{}); err != nil {
-		// Log error but don't fail the request since bookmark was deleted
-		fmt.Printf("Warning: Failed to update tag counts: %v\n", err)
+	// Update tag counts by removing the deleted note's tags
+	if err := h.updateNoteTagCounts(deletedTags, []string{}); err != nil {
+		// Log error but don't fail the request since note was deleted
+		fmt.Printf("Warning: Failed to update note tag counts: %v\n", err)
 	}
 
 	// Return success response
-	response := DeleteBookmarkResponse{
+	response := DeleteNoteResponse{
 		Success: true,
-		Message: "Bookmark deleted successfully",
+		Message: "Note deleted successfully",
 	}
 
 	writeJSONResponse(w, http.StatusOK, response)
 }
 
-func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) EditNote(w http.ResponseWriter, r *http.Request) {
 	// Only allow PUT requests
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -667,14 +652,14 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 	// Set content type to JSON
 	w.Header().Set("Content-Type", "application/json")
 
-	// Get bookmark ID from URL path
-	// Expected format: /api/edit-bookmark/{id}
-	bookmarkID := r.URL.Path[len("/api/edit-bookmark/"):]
+	// Get note ID from URL path
+	// Expected format: /api/edit-note/{id}
+	noteID := r.URL.Path[len("/api/edit-note/"):]
 
-	if bookmarkID == "" {
-		response := BookmarkResponse{
+	if noteID == "" {
+		response := NoteResponse{
 			Success: false,
-			Message: "Bookmark ID is required",
+			Message: "Note ID is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSONResponse(w, http.StatusOK, response)
@@ -682,9 +667,9 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse JSON request body
-	var req EditBookmarkRequest
+	var req EditNoteRequest
 	if err := readJSONRequest(r, &req); err != nil {
-		response := BookmarkResponse{
+		response := NoteResponse{
 			Success: false,
 			Message: "Invalid JSON format",
 		}
@@ -694,7 +679,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 
 	// Validate required fields
 	if req.Title == "" {
-		response := BookmarkResponse{
+		response := NoteResponse{
 			Success: false,
 			Message: "Title is required",
 		}
@@ -703,10 +688,10 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.URL == "" {
-		response := BookmarkResponse{
+	if req.Description == "" {
+		response := NoteResponse{
 			Success: false,
-			Message: "URL is required",
+			Message: "Description is required",
 		}
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSONResponse(w, http.StatusOK, response)
@@ -718,62 +703,62 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 		req.Tags = []string{}
 	}
 
-	var updatedBookmark Bookmark
+	var updatedNote Note
 	var oldTags []string
 
-	// Update bookmark in BadgerDB
+	// Update note in BadgerDB
 	err := h.db.Update(func(txn *badger.Txn) error {
-		// First get the existing bookmark
-		item, err := txn.Get([]byte(bookmarkID))
+		// First get the existing note
+		item, err := txn.Get([]byte(noteID))
 		if err != nil {
 			return err
 		}
 
-		var existingBookmark Bookmark
+		var existingNote Note
 		err = item.Value(func(val []byte) error {
-			return json.Unmarshal(val, &existingBookmark)
+			return json.Unmarshal(val, &existingNote)
 		})
 		if err != nil {
 			return err
 		}
 
 		// Store old tags for count update
-		oldTags = existingBookmark.Tags
+		oldTags = existingNote.Tags
 
-		// Update the bookmark with new values
-		updatedBookmark = Bookmark{
-			ID:        existingBookmark.ID,
-			Title:     req.Title,
-			URL:       req.URL,
-			Tags:      req.Tags,
-			CreatedAt: existingBookmark.CreatedAt, // Keep original creation time
-			UpdatedAt: time.Now(),                 // Update the modification time
+		// Update the note with new values
+		updatedNote = Note{
+			ID:          existingNote.ID,
+			Title:       req.Title,
+			Description: req.Description,
+			Tags:        req.Tags,
+			CreatedAt:   existingNote.CreatedAt, // Keep original creation time
+			UpdatedAt:   time.Now(),             // Update the modification time
 		}
 
-		// Serialize updated bookmark to JSON
-		bookmarkJSON, err := json.Marshal(updatedBookmark)
+		// Serialize updated note to JSON
+		noteJSON, err := json.Marshal(updatedNote)
 		if err != nil {
 			return err
 		}
 
-		// Save updated bookmark
-		return txn.Set([]byte(bookmarkID), bookmarkJSON)
+		// Save updated note
+		return txn.Set([]byte(noteID), noteJSON)
 	})
 
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			response := BookmarkResponse{
+			response := NoteResponse{
 				Success: false,
-				Message: "Bookmark not found",
+				Message: "Note not found",
 			}
 			w.WriteHeader(http.StatusNotFound)
 			writeJSONResponse(w, http.StatusOK, response)
 			return
 		}
 
-		response := BookmarkResponse{
+		response := NoteResponse{
 			Success: false,
-			Message: "Error updating bookmark in database",
+			Message: "Error updating note in database",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSONResponse(w, http.StatusOK, response)
@@ -781,16 +766,16 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the tag counts with old and new tags
-	if err := h.updateTagCounts(oldTags, updatedBookmark.Tags); err != nil {
-		// Log error but don't fail the request since bookmark was updated
-		fmt.Printf("Warning: Failed to update tag counts: %v\n", err)
+	if err := h.updateNoteTagCounts(oldTags, updatedNote.Tags); err != nil {
+		// Log error but don't fail the request since note was updated
+		fmt.Printf("Warning: Failed to update note tag counts: %v\n", err)
 	}
 
 	// Return success response
-	response := BookmarkResponse{
+	response := NoteResponse{
 		Success: true,
-		Message: "Bookmark updated successfully",
-		Data:    updatedBookmark,
+		Message: "Note updated successfully",
+		Data:    updatedNote,
 	}
 
 	writeJSONResponse(w, http.StatusOK, response)

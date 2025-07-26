@@ -1,13 +1,11 @@
 # Mon
 
-A self-hosted web application to organize your life. Mon provides a clean, modern interface for managing bookmarks, todos, movies, YouTube videos, and more - all from one central dashboard.
+A self-hosted web application to organize your life. Mon provides a clean, modern interface for managing bookmarks, notes, and more to come - all from one central dashboard.
 
 ## Features
 
 - 📖 **Bookmark Management** - Save and organize your favorite websites with tags
-- ✅ **Todo Management** - Keep track of your tasks and projects
-- 🎬 **Movie Tracking** - Manage your watchlist and movie collection
-- 📺 **YouTube Organization** - Save and categorize YouTube videos
+- 📝 **Note Management** - Create and organize notes with tags and descriptions
 - 🌙 **Theme Support** - Light and dark mode options
 - 🔒 **Self-Hosted** - Keep your data private and under your control
 - ⚡ **Fast & Lightweight** - Built with Go backend and React frontend
@@ -105,13 +103,21 @@ mon/
 
 ## API Endpoints
 
-The application provides a RESTful API for bookmark management:
+The application provides RESTful APIs for managing your data:
 
-- `POST /api/create-bookmark` - Create a new bookmark
-- `GET /api/get-bookmarks` - Retrieve all bookmarks
-- `GET /api/get-tags` - Get all unique tags
-- `PUT /api/edit-bookmark/{id}` - Update a bookmark
-- `DELETE /api/delete-bookmark/{id}` - Delete a bookmark
+### Bookmark API
+- `POST /api/bookmark/create` - Create a new bookmark
+- `GET /api/bookmark/list` - Retrieve all bookmarks (supports filtering by tags, keywords)
+- `GET /api/bookmark/tag/list` - Get all unique bookmark tags with counts
+- `PUT /api/bookmark/edit/{id}` - Update a bookmark
+- `DELETE /api/bookmark/delete/{id}` - Delete a bookmark
+
+### Notes API
+- `POST /api/note/create` - Create a new note
+- `GET /api/note/list` - Retrieve all notes (supports filtering by tags, keywords)
+- `GET /api/note/tag/list` - Get all unique note tags with counts
+- `PUT /api/note/edit/{id}` - Update a note
+- `DELETE /api/note/delete/{id}` - Delete a note
 
 For detailed API documentation, see [api/README.md](api/README.md).
 

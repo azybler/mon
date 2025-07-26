@@ -166,13 +166,21 @@ func main() {
 
 	// Initialize handlers
 	bookmarkHandler := handlers.NewBookmarkHandler(db)
+	noteHandler := handlers.NewNoteHandler(db)
 
 	// Register API routes with CORS and gzip middleware
-	http.HandleFunc("/api/create-bookmark", corsGzipMiddleware(bookmarkHandler.NewBookmark))
-	http.HandleFunc("/api/get-bookmarks", corsGzipMiddleware(bookmarkHandler.GetBookmarks))
-	http.HandleFunc("/api/get-tags", corsGzipMiddleware(bookmarkHandler.GetTags))
-	http.HandleFunc("/api/edit-bookmark/", corsGzipMiddleware(bookmarkHandler.EditBookmark))
-	http.HandleFunc("/api/delete-bookmark/", corsGzipMiddleware(bookmarkHandler.DeleteBookmark))
+	http.HandleFunc("/api/bookmark/create", corsGzipMiddleware(bookmarkHandler.NewBookmark))
+	http.HandleFunc("/api/bookmark/list", corsGzipMiddleware(bookmarkHandler.GetBookmarks))
+	http.HandleFunc("/api/bookmark/tag/list", corsGzipMiddleware(bookmarkHandler.GetBookmarkTags))
+	http.HandleFunc("/api/bookmark/edit/", corsGzipMiddleware(bookmarkHandler.EditBookmark))
+	http.HandleFunc("/api/bookmark/delete/", corsGzipMiddleware(bookmarkHandler.DeleteBookmark))
+
+	// Register note API routes with CORS and gzip middleware
+	http.HandleFunc("/api/note/create", corsGzipMiddleware(noteHandler.NewNote))
+	http.HandleFunc("/api/note/list", corsGzipMiddleware(noteHandler.GetNotes))
+	http.HandleFunc("/api/note/tag/list", corsGzipMiddleware(noteHandler.GetNoteTags))
+	http.HandleFunc("/api/note/edit/", corsGzipMiddleware(noteHandler.EditNote))
+	http.HandleFunc("/api/note/delete/", corsGzipMiddleware(noteHandler.DeleteNote))
 
 	// Serve robots.txt to deny all crawlers
 	http.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {

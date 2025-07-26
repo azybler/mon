@@ -9,12 +9,8 @@ function Home() {
           <p>0 saved</p>
         </div>
         <div className="stat-card">
-          <h2>Todo Items</h2>
+          <h2>Notes</h2>
           <p>0 pending</p>
-        </div>
-        <div className="stat-card">
-          <h2>Watch Lists</h2>
-          <p>0 items</p>
         </div>
       </div>
     </div>
