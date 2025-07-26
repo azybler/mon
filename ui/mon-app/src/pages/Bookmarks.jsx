@@ -158,6 +158,7 @@ function Bookmarks() {
       const tags = formData.tags
         .split(',')
         .map(tag => tag.trim())
+        .map(tag => tag.toLowerCase())
         .filter(tag => tag.length > 0)
 
       const url = editingBookmark 

@@ -887,7 +887,7 @@
   background-color: var(--button-bg);
   color: var(--button-text);
   border: 1px solid var(--button-border);
-  padding: 0.4rem 0.8rem;
+  padding: 0.2rem 0.4rem;
   border-radius: 16px;
   font-size: 0.8rem;
   cursor: pointer;

@@ -6,7 +6,7 @@ function Settings() {
   const [aiConfig, setAiConfig] = useState({
     apiKey: '',
     model: 'deepseek/deepseek-chat-v3-0324:free',
-    tagPrompt: 'Based on the title and URL provided, suggest 3-5 relevant tags for this bookmark. Return only the tags separated by commas, nothing else. Focus on categories like: technology, work, reference, tutorial, news, entertainment, development, design, etc.'
+    tagPrompt: 'Based on the title and URL provided, suggest 3-5 relevant tags for this bookmark. Return only the tags separated by commas, nothing else. Focus on categories like: technology, work, reference, tutorial, news, entertainment, development, design, etc. It should be lowercase and concise.'
   })
   const [saved, setSaved] = useState(false)
 
