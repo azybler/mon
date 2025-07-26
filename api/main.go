@@ -168,7 +168,7 @@ func main() {
 	bookmarkHandler := handlers.NewBookmarkHandler(db)
 	noteHandler := handlers.NewNoteHandler(db)
 
-	// Register API routes with CORS and gzip middleware
+	// Register bookmark API routes with CORS and gzip middleware
 	http.HandleFunc("/api/bookmark/create", corsGzipMiddleware(bookmarkHandler.NewBookmark))
 	http.HandleFunc("/api/bookmark/list", corsGzipMiddleware(bookmarkHandler.GetBookmarks))
 	http.HandleFunc("/api/bookmark/tag/list", corsGzipMiddleware(bookmarkHandler.GetBookmarkTags))
