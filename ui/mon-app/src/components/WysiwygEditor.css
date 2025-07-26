@@ -1,0 +1,222 @@
+/* WYSIWYG Editor Styles */
+.wysiwyg-editor {
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  background: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.wysiwyg-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e1e5e9;
+  background: #f8f9fa;
+  border-radius: 6px 6px 0 0;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.toolbar-button:hover {
+  background: #e9ecef;
+  border-color: #ced4da;
+}
+
+.toolbar-button.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.toolbar-button:active {
+  transform: translateY(1px);
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: #dee2e6;
+  margin: 0 4px;
+}
+
+.toolbar-select {
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  color: #495057;
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+.toolbar-select:hover {
+  border-color: #007bff;
+}
+
+.toolbar-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.wysiwyg-content {
+  min-height: 120px;
+  max-height: 300px;
+  padding: 12px 16px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #495057;
+  border-radius: 0 0 6px 6px;
+  outline: none;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.wysiwyg-content:focus {
+  box-shadow: inset 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.wysiwyg-content[data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #6c757d;
+  font-style: italic;
+  pointer-events: none;
+}
+
+/* Content formatting styles */
+.wysiwyg-content h1 {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 16px 0 8px 0;
+  line-height: 1.3;
+}
+
+.wysiwyg-content h2 {
+  font-size: 20px;
+  font-weight: bold;
+  margin: 14px 0 6px 0;
+  line-height: 1.3;
+}
+
+.wysiwyg-content h3 {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 12px 0 4px 0;
+  line-height: 1.3;
+}
+
+.wysiwyg-content p {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.wysiwyg-content ul,
+.wysiwyg-content ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.wysiwyg-content li {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.wysiwyg-content strong {
+  font-weight: bold;
+}
+
+.wysiwyg-content em {
+  font-style: italic;
+}
+
+.wysiwyg-content u {
+  text-decoration: underline;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .wysiwyg-editor {
+    border-color: #3a3a3a;
+    background: #2d2d2d;
+  }
+  
+  .wysiwyg-toolbar {
+    background: #3a3a3a;
+    border-bottom-color: #4a4a4a;
+  }
+  
+  .toolbar-button {
+    color: #e0e0e0;
+  }
+  
+  .toolbar-button:hover {
+    background: #4a4a4a;
+    border-color: #5a5a5a;
+  }
+  
+  .toolbar-separator {
+    background: #5a5a5a;
+  }
+  
+  .toolbar-select {
+    background: #3a3a3a;
+    border-color: #5a5a5a;
+    color: #e0e0e0;
+  }
+  
+  .wysiwyg-content {
+    background: #2d2d2d;
+    color: #e0e0e0;
+  }
+  
+  .wysiwyg-content[data-placeholder]:empty:before {
+    color: #888;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .wysiwyg-toolbar {
+    padding: 6px 8px;
+    gap: 2px;
+  }
+  
+  .toolbar-button {
+    min-width: 28px;
+    height: 28px;
+    padding: 4px 6px;
+    font-size: 13px;
+  }
+  
+  .toolbar-select {
+    height: 28px;
+    font-size: 12px;
+    min-width: 70px;
+  }
+  
+  .wysiwyg-content {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}

@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
+import WysiwygEditor from '../components/WysiwygEditor'
+import '../components/WysiwygEditor.css'
 
 // Memoized search input component to prevent unnecessary re-renders
 const SearchInput = memo(({ searchKeywords, onSearchChange, onClearSearch }) => {
@@ -192,7 +194,14 @@ function Notes() {
   const createNote = async (e) => {
     e.preventDefault()
     
-    if (!formData.title.trim() || !formData.description.trim()) {
+    // Function to strip HTML tags for validation
+    const stripHtml = (html) => {
+      const tmp = document.createElement('div')
+      tmp.innerHTML = html
+      return tmp.textContent || tmp.innerText || ''
+    }
+    
+    if (!formData.title.trim() || !stripHtml(formData.description).trim()) {
       alert('Title and Description are required')
       return
     }
@@ -278,7 +287,14 @@ function Notes() {
   }
 
   const generateTags = async () => {
-    if (!formData.title.trim() || !formData.description.trim()) {
+    // Function to strip HTML tags for validation
+    const stripHtml = (html) => {
+      const tmp = document.createElement('div')
+      tmp.innerHTML = html
+      return tmp.textContent || tmp.innerText || ''
+    }
+    
+    if (!formData.title.trim() || !stripHtml(formData.description).trim()) {
       alert('Please enter a title and description first')
       return
     }
@@ -299,7 +315,9 @@ function Notes() {
         return
       }
 
-      const prompt = `${aiConfig.tagPrompt}\n\nTitle: ${formData.title}\nDescription: ${formData.description}`
+      // Strip HTML from description for AI processing
+      const cleanDescription = stripHtml(formData.description)
+      const prompt = `${aiConfig.tagPrompt}\n\nTitle: ${formData.title}\nDescription: ${cleanDescription}`
       
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -598,7 +616,7 @@ function Notes() {
               </div>
               
               <div className="note-description">
-                <p>{note.description}</p>
+                <div dangerouslySetInnerHTML={{ __html: note.description }} />
               </div>
 
               {note.tags && note.tags.length > 0 && (
@@ -640,14 +658,10 @@ function Notes() {
 
               <div className="form-group">
                 <label htmlFor="description">Description</label>
-                <input
-                  type="text"
-                  id="description"
-                  name="description"
+                <WysiwygEditor
                   value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Description"
-                  required
+                  onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                  placeholder="Enter note description with formatting..."
                 />
               </div>
 
