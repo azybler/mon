@@ -297,13 +297,26 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 
 	// Parse query parameters for tag filtering
 	queryTags := r.URL.Query().Get("tags")
+	queryExcludeTags := r.URL.Query().Get("exclude_tags")
 	var filterTags []string
+	var excludeTags []string
+
 	if queryTags != "" {
 		// Split tags by comma and trim whitespace
 		for _, tag := range strings.Split(queryTags, ",") {
 			trimmed := strings.TrimSpace(tag)
 			if trimmed != "" {
 				filterTags = append(filterTags, trimmed)
+			}
+		}
+	}
+
+	if queryExcludeTags != "" {
+		// Split exclude tags by comma and trim whitespace
+		for _, tag := range strings.Split(queryExcludeTags, ",") {
+			trimmed := strings.TrimSpace(tag)
+			if trimmed != "" {
+				excludeTags = append(excludeTags, trimmed)
 			}
 		}
 	}
@@ -332,22 +345,40 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 
 					// Apply tag filtering if filter tags are specified
 					if len(filterTags) > 0 {
-						hasAllTags := true
+						hasAnyTag := false
 						for _, filterTag := range filterTags {
-							found := false
 							for _, bookmarkTag := range bookmark.Tags {
 								if bookmarkTag == filterTag {
-									found = true
+									hasAnyTag = true
 									break
 								}
 							}
-							if !found {
-								hasAllTags = false
+							if hasAnyTag {
 								break
 							}
 						}
-						// Only include bookmark if it has all required tags
-						if !hasAllTags {
+						// Only include bookmark if it has any of the required tags
+						if !hasAnyTag {
+							return nil
+						}
+					}
+
+					// Apply exclude tag filtering if exclude tags are specified
+					if len(excludeTags) > 0 {
+						hasExcludedTag := false
+						for _, excludeTag := range excludeTags {
+							for _, bookmarkTag := range bookmark.Tags {
+								if bookmarkTag == excludeTag {
+									hasExcludedTag = true
+									break
+								}
+							}
+							if hasExcludedTag {
+								break
+							}
+						}
+						// Exclude bookmark if it has any of the excluded tags
+						if hasExcludedTag {
 							return nil
 						}
 					}

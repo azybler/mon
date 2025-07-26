@@ -4,6 +4,7 @@ function Bookmarks() {
   const [bookmarks, setBookmarks] = useState([])
   const [tags, setTags] = useState([])
   const [selectedTags, setSelectedTags] = useState([]) // New state for selected tags
+  const [filterMode, setFilterMode] = useState('include') // 'include' or 'exclude'
   const [loading, setLoading] = useState(true)
   const [tagsLoading, setTagsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -22,10 +23,10 @@ function Bookmarks() {
     fetchTags()
   }, [])
 
-  // Fetch bookmarks whenever selectedTags change
+  // Fetch bookmarks whenever selectedTags or filterMode change
   useEffect(() => {
     fetchBookmarks()
-  }, [selectedTags])
+  }, [selectedTags, filterMode])
 
   const fetchTags = async () => {
     try {
@@ -51,9 +52,19 @@ function Bookmarks() {
       
       // Build URL with tag filters if any are selected
       let url = 'http://localhost:8080/api/get-bookmarks'
-      if (selectedTags.length > 0) {
+      
+      if (filterMode === 'include' && selectedTags.length > 0) {
+        // Include mode: send selected tags to show bookmarks with any of these tags
         const tagParams = selectedTags.join(',')
         url += `?tags=${encodeURIComponent(tagParams)}`
+      } else if (filterMode === 'exclude') {
+        // Exclude mode: send unselected tags to exclude bookmarks with these tags
+        const allTagNames = tags.map(tagString => tagString.split(',')[0])
+        const unselectedTags = allTagNames.filter(tag => !selectedTags.includes(tag))
+        if (unselectedTags.length > 0) {
+          const tagParams = unselectedTags.join(',')
+          url += `?exclude_tags=${encodeURIComponent(tagParams)}`
+        }
       }
       
       const response = await fetch(url)
@@ -265,7 +276,32 @@ function Bookmarks() {
 
   // Clear all tag filters
   const clearTagFilters = () => {
-    setSelectedTags([])
+    if (filterMode === 'exclude') {
+      // In exclude mode, "clear filters" means select all tags (exclude none)
+      const allTagNames = tags.map(tagString => tagString.split(',')[0])
+      setSelectedTags(allTagNames)
+    } else {
+      // In include mode, clear all selections
+      setSelectedTags([])
+    }
+  }
+
+  // Toggle filter mode between include and exclude
+  const toggleFilterMode = () => {
+    setFilterMode(prev => {
+      const newMode = prev === 'include' ? 'exclude' : 'include'
+      
+      if (newMode === 'exclude') {
+        // When switching to exclude mode, select all tags initially
+        const allTagNames = tags.map(tagString => tagString.split(',')[0])
+        setSelectedTags(allTagNames)
+      } else {
+        // When switching to include mode, clear all selections
+        setSelectedTags([])
+      }
+      
+      return newMode
+    })
   }
 
   if (loading) {
@@ -295,10 +331,15 @@ function Bookmarks() {
     <div className="section-content">
       <div className="bookmarks-header">
         <div>
-          {selectedTags.length > 0 ? (
+          {filterMode === 'include' && selectedTags.length > 0 ? (
             <>
               {bookmarks.length} Bookmark{bookmarks.length !== 1 ? 's' : ''} 
-              <span className="filter-indicator"> (filtered by {selectedTags.length} tag{selectedTags.length !== 1 ? 's' : ''})</span>
+              <span className="filter-indicator"> (showing bookmarks with {selectedTags.length} tag{selectedTags.length !== 1 ? 's' : ''})</span>
+            </>
+          ) : filterMode === 'exclude' && selectedTags.length < tags.length ? (
+            <>
+              {bookmarks.length} Bookmark{bookmarks.length !== 1 ? 's' : ''} 
+              <span className="filter-indicator"> (excluding {tags.length - selectedTags.length} tag{tags.length - selectedTags.length !== 1 ? 's' : ''})</span>
             </>
           ) : (
             `${bookmarks.length} Bookmark${bookmarks.length !== 1 ? 's' : ''}`
@@ -316,16 +357,31 @@ function Bookmarks() {
       {!tagsLoading && tags.length > 0 && (
         <div className="tags-section">
           <div className="tags-header">
-            <h3>Filter by Tags ({tags.length})</h3>
-            {selectedTags.length > 0 && (
-              <button 
-                className="clear-filters-button"
-                onClick={clearTagFilters}
-                title="Clear all tag filters"
-              >
-                Clear Filters ({selectedTags.length})
-              </button>
-            )}
+            <h3>
+              {filterMode === 'include' ? 'Filter by Tags' : 'Exclude Tags'} ({tags.length})
+            </h3>
+            <div className="tags-controls">
+              <label className="filter-mode-toggle">
+                <input
+                  type="checkbox"
+                  checked={filterMode === 'exclude'}
+                  onChange={toggleFilterMode}
+                />
+                <span className="toggle-text">
+                  {filterMode === 'include' ? 'Include Mode' : 'Exclude Mode'}
+                </span>
+              </label>
+              {((filterMode === 'include' && selectedTags.length > 0) || 
+                (filterMode === 'exclude' && selectedTags.length < tags.length)) && (
+                <button 
+                  className="clear-filters-button"
+                  onClick={clearTagFilters}
+                  title={filterMode === 'include' ? 'Clear all tag filters' : 'Reset to exclude none'}
+                >
+                  {filterMode === 'include' ? `Clear Filters (${selectedTags.length})` : 'Reset'}
+                </button>
+              )}
+            </div>
           </div>
           <div className="all-tags-container">
             {tags
@@ -338,12 +394,19 @@ function Bookmarks() {
               .sort((a, b) => b.count - a.count) // Sort by count descending
               .map((tag, index) => {
                 const isSelected = selectedTags.includes(tag.name)
+                // In include mode: active when selected
+                // In exclude mode: active when selected (meaning included, not excluded)
+                const isActive = isSelected
                 return (
                   <button 
                     key={index} 
-                    className={`tag-filter ${isSelected ? 'tag-filter-active' : ''}`}
+                    className={`tag-filter ${isActive ? 'tag-filter-active' : ''}`}
                     onClick={() => toggleTagFilter(tag.name)}
-                    title={`${isSelected ? 'Remove' : 'Add'} ${tag.name} filter (${tag.count} bookmark${tag.count !== 1 ? 's' : ''})`}
+                    title={
+                      filterMode === 'include'
+                        ? `${isSelected ? 'Remove' : 'Add'} ${tag.name} filter (${tag.count} bookmark${tag.count !== 1 ? 's' : ''})`
+                        : `${isSelected ? 'Include' : 'Exclude'} ${tag.name} (${tag.count} bookmark${tag.count !== 1 ? 's' : ''})`
+                    }
                   >
                     {tag.name} <span className="tag-count">{tag.count}</span>
                   </button>
