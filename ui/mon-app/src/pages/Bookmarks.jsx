@@ -22,6 +22,7 @@ function Bookmarks() {
   const [tags, setTags] = useState([])
   const [selectedTags, setSelectedTags] = useState([]) // New state for selected tags
   const [filterMode, setFilterMode] = useState('include') // 'include' or 'exclude'
+  const [searchKeywords, setSearchKeywords] = useState('') // New state for keyword search
   const [loading, setLoading] = useState(true)
   const [tagsLoading, setTagsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -39,6 +40,7 @@ function Bookmarks() {
   // Debounce filter changes to prevent excessive API calls
   const debouncedSelectedTags = useDebounce(selectedTags, 300)
   const debouncedFilterMode = useDebounce(filterMode, 300)
+  const debouncedSearchKeywords = useDebounce(searchKeywords, 300)
 
   // Initial data fetch - only runs once
   useEffect(() => {
@@ -85,7 +87,7 @@ function Bookmarks() {
     if (isInitialized) {
       fetchBookmarks()
     }
-  }, [debouncedSelectedTags, debouncedFilterMode, isInitialized])
+  }, [debouncedSelectedTags, debouncedFilterMode, debouncedSearchKeywords, isInitialized])
 
   const fetchTags = useCallback(async () => {
     try {
@@ -111,19 +113,27 @@ function Bookmarks() {
       
       // Build URL with tag filters if any are selected
       let url = 'http://localhost:8080/api/get-bookmarks'
+      const params = new URLSearchParams()
       
       if (filterMode === 'include' && selectedTags.length > 0) {
         // Include mode: send selected tags to show bookmarks with any of these tags
-        const tagParams = selectedTags.join(',')
-        url += `?tags=${encodeURIComponent(tagParams)}`
+        params.append('tags', selectedTags.join(','))
       } else if (filterMode === 'exclude' && tags.length > 0) {
         // Exclude mode: send unselected tags to exclude bookmarks with these tags
         const allTagNames = tags.map(tagString => tagString.split(',')[0])
         const unselectedTags = allTagNames.filter(tag => !selectedTags.includes(tag))
         if (unselectedTags.length > 0) {
-          const tagParams = unselectedTags.join(',')
-          url += `?exclude_tags=${encodeURIComponent(tagParams)}`
+          params.append('exclude_tags', unselectedTags.join(','))
         }
+      }
+      
+      // Add keyword search if provided
+      if (searchKeywords.trim()) {
+        params.append('keywords', searchKeywords.trim())
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`
       }
       
       const response = await fetch(url)
@@ -141,7 +151,7 @@ function Bookmarks() {
     } finally {
       setLoading(false)
     }
-  }, [selectedTags, filterMode, tags])
+  }, [selectedTags, filterMode, tags, searchKeywords])
 
   const createBookmark = async (e) => {
     e.preventDefault()
@@ -429,6 +439,9 @@ function Bookmarks() {
           ) : (
             `${bookmarks.length} Bookmark${bookmarks.length !== 1 ? 's' : ''}`
           )}
+          {searchKeywords && (
+            <span className="search-indicator"> (searching: "{searchKeywords}")</span>
+          )}
         </div>
         <button 
           className="add-bookmark-button"
@@ -500,6 +513,28 @@ function Bookmarks() {
           </div>
         </div>
       )}
+
+      {/* Search section */}
+      <div className="search-section">
+        <div className="search-container">
+          <input
+            type="text"
+            placeholder="Search bookmarks by title, URL, or tags..."
+            value={searchKeywords}
+            onChange={(e) => setSearchKeywords(e.target.value)}
+            className="search-input"
+          />
+          {searchKeywords && (
+            <button 
+              className="clear-search-button"
+              onClick={() => setSearchKeywords('')}
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
 
       {bookmarks.length === 0 ? (
         <div className="empty-state">

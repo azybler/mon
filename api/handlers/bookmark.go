@@ -324,9 +324,10 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 	// Set content type to JSON
 	w.Header().Set("Content-Type", "application/json")
 
-	// Parse query parameters for tag filtering
+	// Parse query parameters for tag filtering and keyword search
 	queryTags := r.URL.Query().Get("tags")
 	queryExcludeTags := r.URL.Query().Get("exclude_tags")
+	keywords := strings.TrimSpace(r.URL.Query().Get("keywords"))
 	var filterTags []string
 	var excludeTags []string
 
@@ -412,6 +413,54 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 						// Exclude bookmark if it has any of the excluded tags
 						if hasExcludedTag {
 							return nil
+						}
+					}
+
+					// Apply keyword search if keywords are specified
+					if keywords != "" {
+						// Split keywords into individual words and normalize
+						keywordWords := strings.Fields(strings.ToLower(keywords))
+						if len(keywordWords) > 0 {
+							// Create searchable text by combining title, URL, and tags
+							searchableText := strings.ToLower(bookmark.Title + " " + bookmark.URL + " " + strings.Join(bookmark.Tags, " "))
+
+							// Separate include and exclude words
+							var includeWords []string
+							var excludeWords []string
+
+							for _, word := range keywordWords {
+								if strings.HasPrefix(word, "-") && len(word) > 1 {
+									// Remove the "-" prefix and add to exclude list
+									excludeWords = append(excludeWords, word[1:])
+								} else {
+									// Add to include list
+									includeWords = append(includeWords, word)
+								}
+							}
+
+							// Check if any exclude words are present
+							for _, excludeWord := range excludeWords {
+								if strings.Contains(searchableText, excludeWord) {
+									// Exclude this bookmark if it contains any exclude word
+									return nil
+								}
+							}
+
+							// Check if all include words are present (only if there are include words)
+							if len(includeWords) > 0 {
+								allIncludeWordsMatch := true
+								for _, word := range includeWords {
+									if !strings.Contains(searchableText, word) {
+										allIncludeWordsMatch = false
+										break
+									}
+								}
+
+								// Only include bookmark if all include words are found
+								if !allIncludeWordsMatch {
+									return nil
+								}
+							}
 						}
 					}
 
