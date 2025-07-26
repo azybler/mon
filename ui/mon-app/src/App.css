@@ -440,6 +440,7 @@
 
 .bookmark-url {
   word-break: break-all;
+  line-height: 1rem;
 }
 
 .bookmark-url a {
@@ -461,8 +462,11 @@
 }
 
 .bookmark-tag {
-  background-color: var(--bg-tertiary);
-  color: var(--content-text-secondary);
+  
+  
+  background-color: var(--button-bg);
+  color: var(--button-text);
+
   padding: 0.2rem 0.4rem;
   border-radius: 8px;
   font-size: 0.7rem;
