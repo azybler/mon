@@ -344,8 +344,7 @@ func (h *NoteHandler) NewNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Title is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -354,8 +353,7 @@ func (h *NoteHandler) NewNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Description is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -385,8 +383,7 @@ func (h *NoteHandler) NewNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Error serializing note data",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -399,8 +396,7 @@ func (h *NoteHandler) NewNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Error saving note to database",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -417,8 +413,7 @@ func (h *NoteHandler) NewNote(w http.ResponseWriter, r *http.Request) {
 		Data:    note,
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	writeJSONResponse(w, http.StatusOK, response)
+	writeJSONResponse(w, http.StatusCreated, response)
 }
 
 func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
@@ -594,8 +589,7 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 			Data:    []Note{},
 			Count:   0,
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -656,8 +650,7 @@ func (h *NoteHandler) GetNoteTags(w http.ResponseWriter, r *http.Request) {
 			Data:    []string{},
 			Count:   0,
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -696,8 +689,7 @@ func (h *NoteHandler) DeleteNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Note ID is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -725,8 +717,7 @@ func (h *NoteHandler) DeleteNote(w http.ResponseWriter, r *http.Request) {
 				Success: false,
 				Message: "Note not found",
 			}
-			w.WriteHeader(http.StatusNotFound)
-			writeJSONResponse(w, http.StatusOK, response)
+			writeJSONResponse(w, http.StatusNotFound, response)
 			return
 		}
 
@@ -734,8 +725,7 @@ func (h *NoteHandler) DeleteNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Error reading note from database",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -749,8 +739,7 @@ func (h *NoteHandler) DeleteNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Error deleting note from database",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -788,8 +777,7 @@ func (h *NoteHandler) EditNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Note ID is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -810,8 +798,7 @@ func (h *NoteHandler) EditNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Title is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -820,8 +807,7 @@ func (h *NoteHandler) EditNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Description is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -878,8 +864,7 @@ func (h *NoteHandler) EditNote(w http.ResponseWriter, r *http.Request) {
 				Success: false,
 				Message: "Note not found",
 			}
-			w.WriteHeader(http.StatusNotFound)
-			writeJSONResponse(w, http.StatusOK, response)
+			writeJSONResponse(w, http.StatusNotFound, response)
 			return
 		}
 
@@ -887,8 +872,7 @@ func (h *NoteHandler) EditNote(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Error updating note in database",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 

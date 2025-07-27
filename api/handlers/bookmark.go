@@ -359,8 +359,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Title is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -369,8 +368,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "URL is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -400,8 +398,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Error serializing bookmark data",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -414,8 +411,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Error saving bookmark to database",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -432,8 +428,7 @@ func (h *BookmarkHandler) NewBookmark(w http.ResponseWriter, r *http.Request) {
 		Data:    bookmark,
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	writeJSONResponse(w, http.StatusOK, response)
+	writeJSONResponse(w, http.StatusCreated, response)
 }
 
 func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
@@ -609,8 +604,7 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 			Data:    []Bookmark{},
 			Count:   0,
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -671,8 +665,7 @@ func (h *BookmarkHandler) GetBookmarkTags(w http.ResponseWriter, r *http.Request
 			Data:    []string{},
 			Count:   0,
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -711,8 +704,7 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 			Success: false,
 			Message: "Bookmark ID is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -740,8 +732,7 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 				Success: false,
 				Message: "Bookmark not found",
 			}
-			w.WriteHeader(http.StatusNotFound)
-			writeJSONResponse(w, http.StatusOK, response)
+			writeJSONResponse(w, http.StatusNotFound, response)
 			return
 		}
 
@@ -749,8 +740,7 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 			Success: false,
 			Message: "Error reading bookmark from database",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -764,8 +754,7 @@ func (h *BookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Request)
 			Success: false,
 			Message: "Error deleting bookmark from database",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -803,8 +792,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Bookmark ID is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -825,8 +813,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Title is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -835,8 +822,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "URL is required",
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusBadRequest, response)
 		return
 	}
 
@@ -893,8 +879,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 				Success: false,
 				Message: "Bookmark not found",
 			}
-			w.WriteHeader(http.StatusNotFound)
-			writeJSONResponse(w, http.StatusOK, response)
+			writeJSONResponse(w, http.StatusNotFound, response)
 			return
 		}
 
@@ -902,8 +887,7 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Error updating bookmark in database",
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJSONResponse(w, http.StatusOK, response)
+		writeJSONResponse(w, http.StatusInternalServerError, response)
 		return
 	}
 
