@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -73,6 +74,127 @@ type NoteTagsResponse struct {
 
 type NoteHandler struct {
 	db *badger.DB
+}
+
+// evaluateNoteTagExpression evaluates a tag expression against a set of note tags
+func evaluateNoteTagExpression(noteTags []string, expression string) bool {
+	if expression == "" {
+		return true // Empty expression matches all
+	}
+
+	// Create a case-insensitive set of note tags
+	tagSet := make(map[string]bool)
+	for _, tag := range noteTags {
+		tagSet[strings.ToLower(tag)] = true
+	}
+
+	// Normalize the expression to lowercase
+	expr := strings.ToLower(expression)
+
+	// Replace tag names with boolean values
+	// Find all words that could be tag names (alphanumeric + underscore + hyphen)
+	wordRegex := regexp.MustCompile(`\b[a-zA-Z0-9_-]+\b`)
+	expr = wordRegex.ReplaceAllStringFunc(expr, func(word string) string {
+		lowerWord := strings.ToLower(word)
+		// Skip logical operators
+		if lowerWord == "and" || lowerWord == "or" || lowerWord == "not" {
+			return word
+		}
+		// Replace tag names with boolean values
+		if tagSet[lowerWord] {
+			return "true"
+		}
+		return "false"
+	})
+
+	// Replace logical operators with Go equivalents
+	expr = strings.ReplaceAll(expr, " and ", " && ")
+	expr = strings.ReplaceAll(expr, " or ", " || ")
+	expr = strings.ReplaceAll(expr, " not ", " !")
+	expr = strings.ReplaceAll(expr, "not ", "!")
+
+	// Clean up extra spaces
+	expr = regexp.MustCompile(`\s+`).ReplaceAllString(expr, " ")
+	expr = strings.TrimSpace(expr)
+
+	// Use the same simple expression evaluator as bookmarks
+	return evaluateNoteSimpleBooleanExpression(expr)
+}
+
+// evaluateNoteSimpleBooleanExpression evaluates a simple boolean expression for notes
+func evaluateNoteSimpleBooleanExpression(expr string) bool {
+	// Remove all whitespace
+	expr = strings.ReplaceAll(expr, " ", "")
+
+	// Handle parentheses recursively
+	for strings.Contains(expr, "(") {
+		// Find the innermost parentheses
+		start := -1
+		for i, char := range expr {
+			if char == '(' {
+				start = i
+			} else if char == ')' && start != -1 {
+				// Evaluate the expression inside parentheses
+				inner := expr[start+1 : i]
+				result := evaluateNoteSimpleBooleanExpression(inner)
+				resultStr := "false"
+				if result {
+					resultStr = "true"
+				}
+				// Replace the parentheses expression with the result
+				expr = expr[:start] + resultStr + expr[i+1:]
+				break
+			}
+		}
+	}
+
+	// Now evaluate the expression without parentheses
+	return evaluateNoteWithoutParentheses(expr)
+}
+
+// evaluateNoteWithoutParentheses evaluates a boolean expression without parentheses for notes
+func evaluateNoteWithoutParentheses(expr string) bool {
+	// Handle NOT operators first
+	for strings.Contains(expr, "!") {
+		notRegex := regexp.MustCompile(`!(true|false)`)
+		expr = notRegex.ReplaceAllStringFunc(expr, func(match string) string {
+			if strings.HasSuffix(match, "true") {
+				return "false"
+			}
+			return "true"
+		})
+	}
+
+	// Handle AND operators (higher precedence than OR)
+	for strings.Contains(expr, "&&") {
+		andRegex := regexp.MustCompile(`(true|false)&&(true|false)`)
+		expr = andRegex.ReplaceAllStringFunc(expr, func(match string) string {
+			parts := strings.Split(match, "&&")
+			left := parts[0] == "true"
+			right := parts[1] == "true"
+			if left && right {
+				return "true"
+			}
+			return "false"
+		})
+	}
+
+	// Handle OR operators
+	for strings.Contains(expr, "||") {
+		orRegex := regexp.MustCompile(`(true|false)\|\|(true|false)`)
+		expr = orRegex.ReplaceAllStringFunc(expr, func(match string) string {
+			parts := strings.Split(match, "||")
+			left := parts[0] == "true"
+			right := parts[1] == "true"
+			if left || right {
+				return "true"
+			}
+			return "false"
+		})
+	}
+
+	// The final result should be either "true" or "false"
+	return expr == "true"
 }
 
 func NewNoteHandler(db *badger.DB) *NoteHandler {
@@ -312,6 +434,7 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters for tag filtering and keyword search
 	queryTags := r.URL.Query().Get("tags")
 	queryExcludeTags := r.URL.Query().Get("exclude_tags")
+	advancedExpression := strings.TrimSpace(r.URL.Query().Get("advanced"))
 	keywords := strings.TrimSpace(r.URL.Query().Get("keywords"))
 	var filterTags []string
 	var excludeTags []string
@@ -361,8 +484,14 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 						return nil
 					}
 
-					// Apply tag filtering if filter tags are specified
-					if len(filterTags) > 0 {
+					// Apply tag filtering based on mode
+					if advancedExpression != "" {
+						// Use advanced expression evaluation
+						if !evaluateNoteTagExpression(note.Tags, advancedExpression) {
+							return nil
+						}
+					} else if len(filterTags) > 0 {
+						// Apply include tag filtering if filter tags are specified
 						hasAnyTag := false
 						for _, filterTag := range filterTags {
 							for _, noteTag := range note.Tags {
@@ -379,10 +508,8 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 						if !hasAnyTag {
 							return nil
 						}
-					}
-
-					// Apply exclude tag filtering if exclude tags are specified
-					if len(excludeTags) > 0 {
+					} else if len(excludeTags) > 0 {
+						// Apply exclude tag filtering if exclude tags are specified
 						hasExcludedTag := false
 						for _, excludeTag := range excludeTags {
 							for _, noteTag := range note.Tags {

@@ -5,7 +5,11 @@ A self-hosted web application to organize your life. Mon provides a clean, moder
 ## Features
 
 - 📖 **Bookmark Management** - Save and organize your favorite websites with tags
-- 📝 **Note Management** - Create and organize notes with tags and descriptions
+- 📝 **Note Management** - Create and organize notes with tags and descriptions  
+- 🔍 **Advanced Filtering** - Three filter modes for precise content discovery:
+  - **Include Mode**: Show items that have any of the selected tags
+  - **Exclude Mode**: Hide items that have any of the selected tags
+  - **Advanced Mode**: Use boolean expressions with `and`, `or`, `not` operators and parentheses (e.g., `(#web or #tutorial) and not #draft`)
 - 🌙 **Theme Support** - Light and dark mode options
 - 🔒 **Self-Hosted** - Keep your data private and under your control
 - ⚡ **Fast & Lightweight** - Built with Go backend and React frontend
@@ -107,17 +111,36 @@ The application provides RESTful APIs for managing your data:
 
 ### Bookmark API
 - `POST /api/bookmark/create` - Create a new bookmark
-- `GET /api/bookmark/list` - Retrieve all bookmarks (supports filtering by tags, keywords)
+- `GET /api/bookmark/list` - Retrieve all bookmarks with filtering options:
+  - `?tags=tag1,tag2` - Include mode: show bookmarks with any of these tags
+  - `?exclude_tags=tag1,tag2` - Exclude mode: hide bookmarks with any of these tags
+  - `?advanced=expression` - Advanced mode: boolean tag expressions (e.g., `web and (tutorial or reference) and not old`)
+  - `?keywords=search terms` - Keyword search in title, URL, and tags
 - `GET /api/bookmark/tag/list` - Get all unique bookmark tags with counts
 - `PUT /api/bookmark/edit/{id}` - Update a bookmark
 - `DELETE /api/bookmark/delete/{id}` - Delete a bookmark
 
 ### Notes API
 - `POST /api/note/create` - Create a new note
-- `GET /api/note/list` - Retrieve all notes (supports filtering by tags, keywords)
+- `GET /api/note/list` - Retrieve all notes with filtering options:
+  - `?tags=tag1,tag2` - Include mode: show notes with any of these tags
+  - `?exclude_tags=tag1,tag2` - Exclude mode: hide notes with any of these tags
+  - `?advanced=expression` - Advanced mode: boolean tag expressions (e.g., `work and (meeting or project) and not completed`)
+  - `?keywords=search terms` - Keyword search in title, description, and tags
 - `GET /api/note/tag/list` - Get all unique note tags with counts
 - `PUT /api/note/edit/{id}` - Update a note
 - `DELETE /api/note/delete/{id}` - Delete a note
+
+#### Advanced Filtering Examples
+
+The advanced filtering mode supports complex boolean expressions:
+
+- `#web` - Items tagged with "web"
+- `#web or #mobile` - Items tagged with either "web" or "mobile"
+- `#javascript and #tutorial` - Items tagged with both "javascript" and "tutorial"
+- `not #draft` - Items NOT tagged with "draft"
+- `(#web or #mobile) and #tutorial` - Items tagged with "tutorial" AND either "web" or "mobile"
+- `#programming and not (#old or #deprecated)` - Programming items that are not old or deprecated
 
 For detailed API documentation, see [api/README.md](api/README.md).
 

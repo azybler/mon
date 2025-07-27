@@ -111,9 +111,32 @@ const Notes = () => {
         }
       }
       
-      // Add keyword search if provided
-      if (debouncedSearchKeywords.trim()) {
-        params.append('keywords', debouncedSearchKeywords.trim())
+      const tokens = debouncedSearchKeywords.split(' ').filter(word => word.trim() !== '').map(word => word.trim())
+      
+      // find the first token that starts with a open round bracket "("
+      const openParenIndex = tokens.findIndex(token => token.startsWith('('))
+      
+      // find the last token that ends with a open round bracket ")"
+      const closeParenIndex = tokens.findLastIndex(token => token.endsWith(')'))
+
+      // form a new keyword string from tokens array but excluding everything from openParenIndex to closeParenIndex
+      if (openParenIndex !== -1 && closeParenIndex !== -1 && openParenIndex <= closeParenIndex) {
+        const newKeywords = tokens.slice(0, openParenIndex).concat(tokens.slice(closeParenIndex + 1)).join(' ')
+        if (newKeywords.trim() !== '') {
+          params.append('keywords', newKeywords)
+        }
+      } else {
+        if (debouncedSearchKeywords.trim() !== '') {
+          params.append('keywords', debouncedSearchKeywords.trim())
+        }
+      }
+
+      // form a new advanced expression from tokens array that includes everything from openParenIndex to closeParenIndex
+      if (openParenIndex !== -1 && closeParenIndex !== -1 && openParenIndex <= closeParenIndex) {
+        const newAdvancedExpression = tokens.slice(openParenIndex, closeParenIndex + 1).join(' ').replace(/#/g, '')
+        if (newAdvancedExpression.trim() !== '') {
+          params.append('advanced', newAdvancedExpression)
+        }
       }
       
       if (params.toString()) {
