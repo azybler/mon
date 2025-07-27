@@ -552,8 +552,31 @@ const Bookmarks = () => {
         onClose={closeModal}
         title={editingBookmark ? 'Edit Bookmark' : 'Add New Bookmark'}
         size="medium"
+        actions={
+          <>
+            <button 
+              type="button" 
+              className="cancel-button"
+              onClick={closeModal}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="save-button"
+              disabled={saving}
+              form="bookmark-form"
+            >
+              {saving 
+                ? (editingBookmark ? 'Updating...' : 'Saving...') 
+                : (editingBookmark ? 'Update Bookmark' : 'Save Bookmark')
+              }
+            </button>
+          </>
+        }
       >
-        <form onSubmit={createBookmark} className="bookmark-form">
+        <form id="bookmark-form" onSubmit={createBookmark} className="bookmark-form">
           <div className="form-group">
             <label htmlFor="title">Title *</label>
             <input
@@ -603,27 +626,6 @@ const Bookmarks = () => {
               </button>
             </div>
             <small>Separate multiple tags with commas, or use AI to generate them</small>
-          </div>
-
-          <div className="modal-actions">
-            <button 
-              type="button" 
-              className="cancel-button"
-              onClick={closeModal}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className="save-button"
-              disabled={saving}
-            >
-              {saving 
-                ? (editingBookmark ? 'Updating...' : 'Saving...') 
-                : (editingBookmark ? 'Update Bookmark' : 'Save Bookmark')
-              }
-            </button>
           </div>
         </form>
       </Modal>

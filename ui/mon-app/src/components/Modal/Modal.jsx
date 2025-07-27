@@ -6,6 +6,7 @@ const Modal = ({
   onClose, 
   title, 
   children, 
+  actions,
   className = '',
   size = 'medium' // 'small', 'medium', 'large'
 }) => {
@@ -46,6 +47,12 @@ const Modal = ({
         <div className="modal-body">
           {children}
         </div>
+
+        {actions && (
+          <div className="modal-actions">
+            {actions}
+          </div>
+        )}
       </div>
     </div>
   )

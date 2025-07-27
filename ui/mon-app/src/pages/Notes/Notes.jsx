@@ -562,8 +562,31 @@ const Notes = () => {
         onClose={closeModal}
         title={editingNote ? 'Edit Note' : 'Add New Note'}
         size="large"
+        actions={
+          <>
+            <button 
+              type="button" 
+              className="cancel-button"
+              onClick={closeModal}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="save-button"
+              disabled={saving}
+              form="note-form"
+            >
+              {saving 
+                ? (editingNote ? 'Updating...' : 'Saving...') 
+                : (editingNote ? 'Update Note' : 'Save Note')
+              }
+            </button>
+          </>
+        }
       >
-        <form onSubmit={createNote} className="note-form">
+        <form id="note-form" onSubmit={createNote} className="note-form">
           <div className="form-group">
             <label htmlFor="title">Title *</label>
             <input
@@ -609,27 +632,6 @@ const Notes = () => {
               </button>
             </div>
             <small>Separate multiple tags with commas, or use AI to generate them</small>
-          </div>
-
-          <div className="modal-actions">
-            <button 
-              type="button" 
-              className="cancel-button"
-              onClick={closeModal}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className="save-button"
-              disabled={saving}
-            >
-              {saving 
-                ? (editingNote ? 'Updating...' : 'Saving...') 
-                : (editingNote ? 'Update Note' : 'Save Note')
-              }
-            </button>
           </div>
         </form>
       </Modal>
