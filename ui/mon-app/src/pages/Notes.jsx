@@ -1,54 +1,27 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import WysiwygEditor from '../components/WysiwygEditor'
+import TagsFilter from '../components/TagsFilter'
+import SearchInput from '../components/SearchInput'
 import '../components/WysiwygEditor.css'
 
-// Memoized search input component to prevent unnecessary re-renders
-const SearchInput = memo(({ searchKeywords, onSearchChange, onClearSearch }) => {
-  const searchInputRef = useRef(null)
+const Notes = () => {
+  // Debounce hook for performance optimization
+  function useDebounce(value, delay) {
+    const [debouncedValue, setDebouncedValue] = useState(value)
 
-  return (
-    <div className="search-section">
-      <div className="search-container">
-        <input
-          ref={searchInputRef}
-          type="text"
-          placeholder="Search notes... (use -word to exclude, words can be in any order)"
-          value={searchKeywords}
-          onChange={onSearchChange}
-          className="search-input"
-        />
-        {searchKeywords && (
-          <button 
-            className="clear-search-button"
-            onClick={onClearSearch}
-            title="Clear search"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-    </div>
-  )
-})
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value)
+      }, delay)
 
-// Debounce hook for performance optimization
-function useDebounce(value, delay) {
-  const [debouncedValue, setDebouncedValue] = useState(value)
+      return () => {
+        clearTimeout(handler)
+      }
+    }, [value, delay])
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value)
-    }, delay)
+    return debouncedValue
+  }
 
-    return () => {
-      clearTimeout(handler)
-    }
-  }, [value, delay])
-
-  return debouncedValue
-}
-
-function Notes() {
   const [notes, setNotes] = useState([])
   const [tags, setTags] = useState([])
   const [selectedTags, setSelectedTags] = useState([]) // New state for selected tags
@@ -365,8 +338,8 @@ function Notes() {
   }
 
   // Handle search input changes with focus preservation
-  const handleSearchChange = useCallback((e) => {
-    setSearchKeywords(e.target.value)
+  const handleSearchChange = useCallback((value) => {
+    setSearchKeywords(value)
   }, [])
 
   // Handle clear search
@@ -528,73 +501,23 @@ function Notes() {
       </div>
 
       {/* Tags section */}
-      {!tagsLoading && tags.length > 0 && (
-        <div className="tags-section">
-          <div className="tags-header">
-            <h3>
-              {filterMode === 'include' ? 'Filter by Tags' : 'Exclude Tags'} ({tags.length})
-            </h3>
-            <div className="tags-controls">
-              <label className="filter-mode-toggle">
-                <input
-                  type="checkbox"
-                  checked={filterMode === 'exclude'}
-                  onChange={toggleFilterMode}
-                />
-                <span className="toggle-text">
-                  {filterMode === 'include' ? 'Include Mode' : 'Exclude Mode'}
-                </span>
-              </label>
-              {((filterMode === 'include' && selectedTags.length > 0) || 
-                (filterMode === 'exclude' && selectedTags.length < tags.length)) && (
-                <button 
-                  className="clear-filters-button"
-                  onClick={clearTagFilters}
-                  title={filterMode === 'include' ? 'Clear all tag filters' : 'Reset to exclude none'}
-                >
-                  {filterMode === 'include' ? `Clear Filters (${selectedTags.length})` : 'Reset'}
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="all-tags-container">
-            {tags
-              .map(tagString => {
-                // Parse tag and count from "tag,count" format
-                const [tagName, countStr] = tagString.split(',')
-                const count = parseInt(countStr) || 0
-                return { name: tagName, count }
-              })
-              .sort((a, b) => b.count - a.count) // Sort by count descending
-              .map((tag, index) => {
-                const isSelected = selectedTags.includes(tag.name)
-                // In include mode: active when selected
-                // In exclude mode: active when selected (meaning included, not excluded)
-                const isActive = isSelected
-                return (
-                  <button 
-                    key={index} 
-                    className={`tag-filter ${isActive ? 'tag-filter-active' : ''}`}
-                    onClick={() => toggleTagFilter(tag.name)}
-                    title={
-                      filterMode === 'include'
-                        ? `${isSelected ? 'Remove' : 'Add'} ${tag.name} filter (${tag.count} note${tag.count !== 1 ? 's' : ''})`
-                        : `${isSelected ? 'Include' : 'Exclude'} ${tag.name} (${tag.count} note${tag.count !== 1 ? 's' : ''})`
-                    }
-                  >
-                    {tag.name} <span className="tag-count">{tag.count}</span>
-                  </button>
-                )
-              })}
-          </div>
-        </div>
-      )}
+      <TagsFilter
+        tags={tags}
+        selectedTags={selectedTags}
+        filterMode={filterMode}
+        tagsLoading={tagsLoading}
+        itemType="note"
+        onToggleTagFilter={toggleTagFilter}
+        onClearTagFilters={clearTagFilters}
+        onToggleFilterMode={toggleFilterMode}
+      />
 
       {/* Search section */}
       <SearchInput 
-        searchKeywords={searchKeywords}
+        searchTerm={searchKeywords}
         onSearchChange={handleSearchChange}
         onClearSearch={handleClearSearch}
+        placeholder="Search notes... (use -word to exclude, words can be in any order)"
       />
 
       {notes.length === 0 ? (
