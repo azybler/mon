@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import Home from './pages/Home'
-import Bookmarks from './pages/Bookmarks'
-import Notes from './pages/Notes'
-import YouTube from './pages/YouTube'
-import Movies from './pages/Movies'
-import Settings from './pages/Settings'
-import NotFound from './pages/NotFound'
+import Home from 'pages/Home/Home'
+import Bookmarks from 'pages/Bookmarks/Bookmarks'
+import Notes from 'pages/Notes/Notes'
+import Settings from 'pages/Settings/Settings'
+import NotFound from 'pages/NotFound/NotFound'
 
 function App() {
   const [activeSection, setActiveSection] = useState('home')

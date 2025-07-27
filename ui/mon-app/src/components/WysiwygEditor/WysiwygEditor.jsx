@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import './WysiwygEditor.css'
 
 const WysiwygEditor = ({ value, onChange, placeholder = "Enter text..." }) => {
   const editorRef = useRef(null)

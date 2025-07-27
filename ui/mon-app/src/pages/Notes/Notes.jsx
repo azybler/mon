@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef, memo } from 'react'
-import TagsFilter from '../components/TagsFilter'
-import SearchInput from '../components/SearchInput'
+import { useState, useEffect, useCallback } from 'react'
+import WysiwygEditor from 'components/WysiwygEditor/WysiwygEditor'
+import TagsFilter from 'components/TagsFilter/TagsFilter'
+import SearchInput from 'components/SearchInput/SearchInput'
 
-const Bookmarks = () => {
+const Notes = () => {
   // Debounce hook for performance optimization
   function useDebounce(value, delay) {
     const [debouncedValue, setDebouncedValue] = useState(value)
@@ -20,7 +21,7 @@ const Bookmarks = () => {
     return debouncedValue
   }
 
-  const [bookmarks, setBookmarks] = useState([])
+  const [notes, setNotes] = useState([])
   const [tags, setTags] = useState([])
   const [selectedTags, setSelectedTags] = useState([]) // New state for selected tags
   const [filterMode, setFilterMode] = useState('include') // 'include' or 'exclude'
@@ -29,14 +30,14 @@ const Bookmarks = () => {
   const [tagsLoading, setTagsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showModal, setShowModal] = useState(false)
-  const [editingBookmark, setEditingBookmark] = useState(null)
+  const [editingNote, setEditingNote] = useState(null)
   const [saving, setSaving] = useState(false)
   const [generatingTags, setGeneratingTags] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [mouseDownOnOverlay, setMouseDownOnOverlay] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
-    url: '',
+    description: '',
     tags: ''
   })
 
@@ -49,15 +50,15 @@ const Bookmarks = () => {
   useEffect(() => {
     const initializeData = async () => {
       try {
-        // Fetch both tags and bookmarks in parallel
-        const [tagsResponse, bookmarksResponse] = await Promise.all([
-          fetch('http://localhost:8080/api/bookmark/tag/list'),
-          fetch('http://localhost:8080/api/bookmark/list')
+        // Fetch both tags and notes in parallel
+        const [tagsResponse, notesResponse] = await Promise.all([
+          fetch('http://localhost:8080/api/note/tag/list'),
+          fetch('http://localhost:8080/api/note/list')
         ])
         
-        const [tagsData, bookmarksData] = await Promise.all([
+        const [tagsData, notesData] = await Promise.all([
           tagsResponse.json(),
-          bookmarksResponse.json()
+          notesResponse.json()
         ])
         
         if (tagsData.success) {
@@ -65,12 +66,14 @@ const Bookmarks = () => {
         } else {
           console.error('Failed to fetch tags:', tagsData.message)
         }
-        
-        if (bookmarksData.success) {
-          setBookmarks(bookmarksData.data || [])
+
+        if (notesData.success) {
+          // Filter out notes with empty id
+          const filteredData = (notesData.data || []).filter(note => note.id !== '');
+          setNotes(filteredData || [])
           setError(null)
         } else {
-          setError(bookmarksData.message || 'Failed to fetch bookmarks')
+          setError(notesData.message || 'Failed to fetch notes')
         }
       } catch (err) {
         setError('Error connecting to the server')
@@ -85,7 +88,7 @@ const Bookmarks = () => {
     initializeData()
   }, [])
 
-  const fetchBookmarks = useCallback(async () => {
+  const fetchNotes = useCallback(async () => {
     try {
       // Only show loading spinner for non-search operations to avoid focus loss
       if (!debouncedSearchKeywords.trim()) {
@@ -93,14 +96,14 @@ const Bookmarks = () => {
       }
       
       // Build URL with tag filters if any are selected
-      let url = 'http://localhost:8080/api/bookmark/list'
+      let url = 'http://localhost:8080/api/note/list'
       const params = new URLSearchParams()
       
       if (filterMode === 'include' && selectedTags.length > 0) {
-        // Include mode: send selected tags to show bookmarks with any of these tags
+        // Include mode: send selected tags to show notes with any of these tags
         params.append('tags', selectedTags.join(','))
       } else if (filterMode === 'exclude' && tags.length > 0) {
-        // Exclude mode: send unselected tags to exclude bookmarks with these tags
+        // Exclude mode: send unselected tags to exclude notes with these tags
         const allTagNames = tags.map(tagString => tagString.split(',')[0])
         const unselectedTags = allTagNames.filter(tag => !selectedTags.includes(tag))
         if (unselectedTags.length > 0) {
@@ -118,33 +121,35 @@ const Bookmarks = () => {
       }
       
       const response = await fetch(url)
-      const data = await response.json()
+      const notesData = await response.json()
       
-      if (data.success) {
-        setBookmarks(data.data || [])
+      if (notesData.success) {
+        // Filter out notes with empty id
+        const filteredData = (notesData.data || []).filter(note => note.id !== '');
+        setNotes(filteredData || [])
         setError(null)
       } else {
-        setError(data.message || 'Failed to fetch bookmarks')
+        setError(notesData.message || 'Failed to fetch notes')
       }
     } catch (err) {
       setError('Error connecting to the server')
-      console.error('Error fetching bookmarks:', err)
+      console.error('Error fetching notes:', err)
     } finally {
       setLoading(false)
     }
   }, [selectedTags, filterMode, tags, debouncedSearchKeywords])
 
-  // Fetch bookmarks when filters change (but only after initial load)
+  // Fetch notes when filters change (but only after initial load)
   useEffect(() => {
     if (isInitialized) {
-      fetchBookmarks()
+      fetchNotes()
     }
-  }, [debouncedSelectedTags, debouncedFilterMode, debouncedSearchKeywords, isInitialized, fetchBookmarks])
+  }, [debouncedSelectedTags, debouncedFilterMode, debouncedSearchKeywords, isInitialized, fetchNotes])
 
   const fetchTags = useCallback(async () => {
     try {
       setTagsLoading(true)
-      const response = await fetch('http://localhost:8080/api/bookmark/tag/list')
+      const response = await fetch('http://localhost:8080/api/note/tag/list')
       const data = await response.json()
       
       if (data.success) {
@@ -159,11 +164,18 @@ const Bookmarks = () => {
     }
   }, [])
 
-  const createBookmark = async (e) => {
+  const createNote = async (e) => {
     e.preventDefault()
     
-    if (!formData.title.trim() || !formData.url.trim()) {
-      alert('Title and URL are required')
+    // Function to strip HTML tags for validation
+    const stripHtml = (html) => {
+      const tmp = document.createElement('div')
+      tmp.innerHTML = html
+      return tmp.textContent || tmp.innerText || ''
+    }
+    
+    if (!formData.title.trim() || !stripHtml(formData.description).trim()) {
+      alert('Title and Description are required')
       return
     }
 
@@ -177,11 +189,11 @@ const Bookmarks = () => {
         .map(tag => tag.toLowerCase())
         .filter(tag => tag.length > 0)
 
-      const url = editingBookmark 
-        ? `http://localhost:8080/api/bookmark/edit/${editingBookmark.id}`
-        : 'http://localhost:8080/api/bookmark/create'
-      
-      const method = editingBookmark ? 'PUT' : 'POST'
+      const url = editingNote 
+        ? `http://localhost:8080/api/note/edit/${editingNote.id}`
+        : 'http://localhost:8080/api/note/create'
+
+      const method = editingNote ? 'PUT' : 'POST'
 
       const response = await fetch(url, {
         method: method,
@@ -190,7 +202,7 @@ const Bookmarks = () => {
         },
         body: JSON.stringify({
           title: formData.title.trim(),
-          url: formData.url.trim(),
+          description: formData.description.trim(),
           tags: tags
         })
       })
@@ -199,19 +211,19 @@ const Bookmarks = () => {
       
       if (data.success) {
         // Reset form
-        setFormData({ title: '', url: '', tags: '' })
-        setEditingBookmark(null)
+        setFormData({ title: '', description: '', tags: '' })
+        setEditingNote(null)
         setShowModal(false)
         
         // Optimistically update the UI without refetching everything
-        if (editingBookmark) {
-          // Update existing bookmark in state
-          setBookmarks(prev => prev.map(b => 
-            b.id === editingBookmark.id ? data.data : b
+        if (editingNote) {
+          // Update existing note in state
+          setNotes(prev => prev.map(b => 
+            b.id === editingNote.id ? data.data : b
           ))
         } else {
-          // Add new bookmark to state
-          setBookmarks(prev => [data.data, ...prev])
+          // Add new note to state
+          setNotes(prev => [data.data, ...prev])
         }
         
         // Only refetch tags if we added/changed tags
@@ -219,37 +231,44 @@ const Bookmarks = () => {
           .split(',')
           .map(tag => tag.trim())
           .filter(tag => tag.length > 0)
-        
-        const oldTags = editingBookmark?.tags || []
+
+        const oldTags = editingNote?.tags || []
         const tagsChanged = JSON.stringify(newTags.sort()) !== JSON.stringify(oldTags.sort())
         
         if (tagsChanged) {
           fetchTags()
         }
       } else {
-        alert(data.message || `Failed to ${editingBookmark ? 'update' : 'create'} bookmark`)
+        alert(data.message || `Failed to ${editingNote ? 'update' : 'create'} note`)
       }
     } catch (err) {
-      alert(`Error ${editingBookmark ? 'updating' : 'creating'} bookmark: ` + err.message)
-      console.error(`Error ${editingBookmark ? 'updating' : 'creating'} bookmark:`, err)
+      alert(`Error ${editingNote ? 'updating' : 'creating'} note: ` + err.message)
+      console.error(`Error ${editingNote ? 'updating' : 'creating'} note:`, err)
     } finally {
       setSaving(false)
     }
   }
 
-  const editBookmark = (bookmark) => {
-    setEditingBookmark(bookmark)
+  const editNote = (note) => {
+    setEditingNote(note)
     setFormData({
-      title: bookmark.title,
-      url: bookmark.url,
-      tags: bookmark.tags ? bookmark.tags.join(', ') : ''
+      title: note.title,
+      description: note.description,
+      tags: note.tags ? note.tags.join(', ') : ''
     })
     setShowModal(true)
   }
 
   const generateTags = async () => {
-    if (!formData.title.trim() || !formData.url.trim()) {
-      alert('Please enter a title and URL first')
+    // Function to strip HTML tags for validation
+    const stripHtml = (html) => {
+      const tmp = document.createElement('div')
+      tmp.innerHTML = html
+      return tmp.textContent || tmp.innerText || ''
+    }
+    
+    if (!formData.title.trim() || !stripHtml(formData.description).trim()) {
+      alert('Please enter a title and description first')
       return
     }
 
@@ -269,7 +288,9 @@ const Bookmarks = () => {
         return
       }
 
-      const prompt = `${aiConfig.tagPrompt}\n\nTitle: ${formData.title}\nURL: ${formData.url}`
+      // Strip HTML from description for AI processing
+      const cleanDescription = stripHtml(formData.description)
+      const prompt = `${aiConfig.tagPrompt}\n\nTitle: ${formData.title}\nDescription: ${cleanDescription}`
       
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -277,7 +298,7 @@ const Bookmarks = () => {
           'Authorization': `Bearer ${aiConfig.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': window.location.origin,
-          'X-Title': 'Mon Bookmark Manager'
+          'X-Title': 'Mon Note Manager'
         },
         body: JSON.stringify({
           model: aiConfig.model,
@@ -335,8 +356,8 @@ const Bookmarks = () => {
 
   const closeModal = () => {
     setShowModal(false)
-    setEditingBookmark(null)
-    setFormData({ title: '', url: '', tags: '' })
+    setEditingNote(null)
+    setFormData({ title: '', description: '', tags: '' })
   }
 
   const handleOverlayMouseDown = (e) => {
@@ -354,36 +375,32 @@ const Bookmarks = () => {
     setMouseDownOnOverlay(false)
   }
 
-  const openBookmark = (url) => {
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
-  const deleteBookmark = async (bookmark) => {
-    if (!confirm(`Are you sure you want to delete "${bookmark.title}"?`)) {
+  const deleteNote = async (note) => {
+    if (!confirm(`Are you sure you want to delete "${note.title}"?`)) {
       return
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/bookmark/delete/${bookmark.id}`, {
+      const response = await fetch(`http://localhost:8080/api/note/delete/${note.id}`, {
         method: 'DELETE',
       })
 
       const data = await response.json()
       
       if (data.success) {
-        // Optimistically remove bookmark from state
-        setBookmarks(prev => prev.filter(b => b.id !== bookmark.id))
-        
-        // Only refetch tags if the deleted bookmark had tags
-        if (bookmark.tags && bookmark.tags.length > 0) {
+        // Optimistically remove note from state
+        setNotes(prev => prev.filter(b => b.id !== note.id))
+
+        // Only refetch tags if the deleted note had tags
+        if (note.tags && note.tags.length > 0) {
           fetchTags()
         }
       } else {
-        alert(data.message || 'Failed to delete bookmark')
+        alert(data.message || 'Failed to delete note')
       }
     } catch (err) {
-      alert('Error deleting bookmark: ' + err.message)
-      console.error('Error deleting bookmark:', err)
+      alert('Error deleting note: ' + err.message)
+      console.error('Error deleting note:', err)
     }
   }
 
@@ -433,8 +450,8 @@ const Bookmarks = () => {
   if (loading) {
     return (
       <div className="section-content">
-        <h2>Bookmarks</h2>
-        <p>Loading your bookmarks...</p>
+        <h2>Notes</h2>
+        <p>Loading your notes...</p>
       </div>
     )
   }
@@ -442,10 +459,10 @@ const Bookmarks = () => {
   if (error) {
     return (
       <div className="section-content">
-        <h2>Bookmarks</h2>
+        <h2>Notes</h2>
         <div className="error-message">
           <p>Error: {error}</p>
-          <button onClick={fetchBookmarks} className="retry-button">
+          <button onClick={fetchNotes} className="retry-button">
             Retry
           </button>
         </div>
@@ -455,30 +472,30 @@ const Bookmarks = () => {
 
   return (
     <div className="section-content">
-      <div className="bookmarks-header">
+      <div className="notes-header">
         <div>
           {filterMode === 'include' && selectedTags.length > 0 ? (
             <>
-              {bookmarks.length} Bookmark{bookmarks.length !== 1 ? 's' : ''} 
-              <span className="filter-indicator"> (showing bookmarks with {selectedTags.length} tag{selectedTags.length !== 1 ? 's' : ''})</span>
+              {notes.length} Note{notes.length !== 1 ? 's' : ''} 
+              <span className="filter-indicator"> (showing notes with {selectedTags.length} tag{selectedTags.length !== 1 ? 's' : ''})</span>
             </>
           ) : filterMode === 'exclude' && selectedTags.length < tags.length ? (
             <>
-              {bookmarks.length} Bookmark{bookmarks.length !== 1 ? 's' : ''} 
+              {notes.length} Note{notes.length !== 1 ? 's' : ''} 
               <span className="filter-indicator"> (excluding {tags.length - selectedTags.length} tag{tags.length - selectedTags.length !== 1 ? 's' : ''})</span>
             </>
           ) : (
-            `${bookmarks.length} Bookmark${bookmarks.length !== 1 ? 's' : ''}`
+            `${notes.length} Note${notes.length !== 1 ? 's' : ''}`
           )}
           {searchKeywords && (
             <span className="search-indicator"> (searching: "{searchKeywords}")</span>
           )}
         </div>
         <button 
-          className="add-bookmark-button"
+          className="add-note-button"
           onClick={() => setShowModal(true)}
         >
-          + Add Bookmark
+          + Add Note
         </button>
       </div>
 
@@ -488,7 +505,7 @@ const Bookmarks = () => {
         selectedTags={selectedTags}
         filterMode={filterMode}
         tagsLoading={tagsLoading}
-        itemType="bookmark"
+        itemType="note"
         onToggleTagFilter={toggleTagFilter}
         onClearTagFilters={clearTagFilters}
         onToggleFilterMode={toggleFilterMode}
@@ -499,58 +516,51 @@ const Bookmarks = () => {
         searchTerm={searchKeywords}
         onSearchChange={handleSearchChange}
         onClearSearch={handleClearSearch}
-        placeholder="Search bookmarks... (use -word to exclude, words can be in any order)"
+        placeholder="Search notes... (use -word to exclude, words can be in any order)"
       />
 
-      {bookmarks.length === 0 ? (
+      {notes.length === 0 ? (
         <div className="empty-state">
-          <p>No bookmarks found. Start adding some bookmarks to see them here!</p>
+          <p>No notes found. Start adding some notes to see them here!</p>
           <button 
-            className="add-first-bookmark-button"
+            className="add-first-note-button"
             onClick={() => setShowModal(true)}
           >
-            Add Your First Bookmark
+            Add Your First Note
           </button>
         </div>
       ) : (
-        <div className="bookmarks-grid">
-          {bookmarks.map((bookmark) => (
-            <div key={bookmark.id} className="bookmark-card">
-              <div className="bookmark-header">
-                <h4 className="bookmark-title" onClick={() => openBookmark(bookmark.url)}>{bookmark.title}</h4>
-                <div className="bookmark-actions">
+        <div className="notes-grid">
+          {notes.map((note) => (
+            <div key={note.id} className="note-card">
+              <div className="note-header">
+                <h4 className="note-title">{note.title}</h4>
+                <div className="note-actions">
                   <button 
-                    className="bookmark-edit"
-                    onClick={() => editBookmark(bookmark)}
-                    title="Edit bookmark"
+                    className="note-edit"
+                    onClick={() => editNote(note)}
+                    title="Edit note"
                   >
                     ✏️
                   </button>
                   <button 
-                    className="bookmark-delete"
-                    onClick={() => deleteBookmark(bookmark)}
-                    title="Delete bookmark"
+                    className="note-delete"
+                    onClick={() => deleteNote(note)}
+                    title="Delete note"
                   >
                     🗑️
                   </button>
                 </div>
               </div>
               
-              <div className="bookmark-url">
-                <a 
-                  href={bookmark.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  {bookmark.url}
-                </a>
+              <div className="note-description">
+                <div dangerouslySetInnerHTML={{ __html: note.description }} />
               </div>
 
-              {bookmark.tags && bookmark.tags.length > 0 && (
-                <div className="bookmark-tags">
-                  {bookmark.tags.map((tag, index) => (
-                    <span key={index} className="bookmark-tag">
+              {note.tags && note.tags.length > 0 && (
+                <div className="note-tags">
+                  {note.tags.map((tag, index) => (
+                    <span key={index} className="note-tag">
                       {tag}
                     </span>
                   ))}
@@ -570,11 +580,11 @@ const Bookmarks = () => {
         >
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingBookmark ? 'Edit Bookmark' : 'Add New Bookmark'}</h3>
+              <h3>{editingNote ? 'Edit Note' : 'Add New Note'}</h3>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             
-            <form onSubmit={createBookmark} className="bookmark-form">
+            <form onSubmit={createNote} className="note-form">
               <div className="form-group">
                 <label htmlFor="title">Title *</label>
                 <input
@@ -583,21 +593,17 @@ const Bookmarks = () => {
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
-                  placeholder="Enter bookmark title"
+                  placeholder="Enter note title"
                   required
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="url">URL *</label>
-                <input
-                  type="url"
-                  id="url"
-                  name="url"
-                  value={formData.url}
-                  onChange={handleInputChange}
-                  placeholder="https://example.com"
-                  required
+                <label htmlFor="description">Description</label>
+                <WysiwygEditor
+                  value={formData.description}
+                  onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                  placeholder="Enter note description with formatting..."
                 />
               </div>
 
@@ -641,8 +647,8 @@ const Bookmarks = () => {
                   disabled={saving}
                 >
                   {saving 
-                    ? (editingBookmark ? 'Updating...' : 'Saving...') 
-                    : (editingBookmark ? 'Update Bookmark' : 'Save Bookmark')
+                    ? (editingNote ? 'Updating...' : 'Saving...') 
+                    : (editingNote ? 'Update Note' : 'Save Note')
                   }
                 </button>
               </div>
@@ -654,4 +660,4 @@ const Bookmarks = () => {
   )
 }
 
-export default Bookmarks
+export default Notes
