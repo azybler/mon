@@ -11,6 +11,7 @@ const SearchInput = ({
     <div className="search-section">
       <div className="search-container">
         <input
+          id="searchInput"
           type="text"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
