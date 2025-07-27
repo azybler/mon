@@ -60,6 +60,7 @@ function Bookmarks() {
   const [saving, setSaving] = useState(false)
   const [generatingTags, setGeneratingTags] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [mouseDownOnOverlay, setMouseDownOnOverlay] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     url: '',
@@ -365,6 +366,21 @@ function Bookmarks() {
     setFormData({ title: '', url: '', tags: '' })
   }
 
+  const handleOverlayMouseDown = (e) => {
+    // Only set flag if the mousedown is directly on the overlay (not on modal content)
+    if (e.target === e.currentTarget) {
+      setMouseDownOnOverlay(true)
+    }
+  }
+
+  const handleOverlayClick = (e) => {
+    // Only close modal if both mousedown and click happened on overlay
+    if (e.target === e.currentTarget && mouseDownOnOverlay) {
+      closeModal()
+    }
+    setMouseDownOnOverlay(false)
+  }
+
   const openBookmark = (url) => {
     window.open(url, '_blank', 'noopener,noreferrer')
   }
@@ -624,7 +640,11 @@ function Bookmarks() {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={closeModal}>
+        <div 
+          className="modal-overlay" 
+          onMouseDown={handleOverlayMouseDown}
+          onClick={handleOverlayClick}
+        >
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingBookmark ? 'Edit Bookmark' : 'Add New Bookmark'}</h3>
