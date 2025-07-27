@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import TagsFilter from 'components/TagsFilter/TagsFilter'
 import SearchInput from 'components/SearchInput/SearchInput'
+import Modal from 'components/Modal/Modal'
 
 const Bookmarks = () => {
   // Debounce hook for performance optimization
@@ -33,7 +34,6 @@ const Bookmarks = () => {
   const [saving, setSaving] = useState(false)
   const [generatingTags, setGeneratingTags] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
-  const [mouseDownOnOverlay, setMouseDownOnOverlay] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     url: '',
@@ -339,21 +339,6 @@ const Bookmarks = () => {
     setFormData({ title: '', url: '', tags: '' })
   }
 
-  const handleOverlayMouseDown = (e) => {
-    // Only set flag if the mousedown is directly on the overlay (not on modal content)
-    if (e.target === e.currentTarget) {
-      setMouseDownOnOverlay(true)
-    }
-  }
-
-  const handleOverlayClick = (e) => {
-    // Only close modal if both mousedown and click happened on overlay
-    if (e.target === e.currentTarget && mouseDownOnOverlay) {
-      closeModal()
-    }
-    setMouseDownOnOverlay(false)
-  }
-
   const openBookmark = (url) => {
     window.open(url, '_blank', 'noopener,noreferrer')
   }
@@ -562,94 +547,86 @@ const Bookmarks = () => {
       )}
 
       {/* Modal */}
-      {showModal && (
-        <div 
-          className="modal-overlay" 
-          onMouseDown={handleOverlayMouseDown}
-          onClick={handleOverlayClick}
-        >
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingBookmark ? 'Edit Bookmark' : 'Add New Bookmark'}</h3>
-              <button className="modal-close" onClick={closeModal}>×</button>
-            </div>
-            
-            <form onSubmit={createBookmark} className="bookmark-form">
-              <div className="form-group">
-                <label htmlFor="title">Title *</label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  placeholder="Enter bookmark title"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="url">URL *</label>
-                <input
-                  type="url"
-                  id="url"
-                  name="url"
-                  value={formData.url}
-                  onChange={handleInputChange}
-                  placeholder="https://example.com"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="tags">Tags</label>
-                <div className="tags-input-container">
-                  <input
-                    type="text"
-                    id="tags"
-                    name="tags"
-                    value={formData.tags}
-                    onChange={handleInputChange}
-                    placeholder="work, reference, tutorial (comma separated)"
-                    className="tags-input"
-                  />
-                  <button 
-                    type="button"
-                    className="ai-button"
-                    onClick={generateTags}
-                    disabled={generatingTags}
-                    title="Generate tags with AI"
-                  >
-                    {generatingTags ? '⏳' : '🤖'}
-                  </button>
-                </div>
-                <small>Separate multiple tags with commas, or use AI to generate them</small>
-              </div>
-
-              <div className="modal-actions">
-                <button 
-                  type="button" 
-                  className="cancel-button"
-                  onClick={closeModal}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="save-button"
-                  disabled={saving}
-                >
-                  {saving 
-                    ? (editingBookmark ? 'Updating...' : 'Saving...') 
-                    : (editingBookmark ? 'Update Bookmark' : 'Save Bookmark')
-                  }
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={editingBookmark ? 'Edit Bookmark' : 'Add New Bookmark'}
+        size="medium"
+      >
+        <form onSubmit={createBookmark} className="bookmark-form">
+          <div className="form-group">
+            <label htmlFor="title">Title *</label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              placeholder="Enter bookmark title"
+              required
+            />
           </div>
-        </div>
-      )}
+
+          <div className="form-group">
+            <label htmlFor="url">URL *</label>
+            <input
+              type="url"
+              id="url"
+              name="url"
+              value={formData.url}
+              onChange={handleInputChange}
+              placeholder="https://example.com"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="tags">Tags</label>
+            <div className="tags-input-container">
+              <input
+                type="text"
+                id="tags"
+                name="tags"
+                value={formData.tags}
+                onChange={handleInputChange}
+                placeholder="work, reference, tutorial (comma separated)"
+                className="tags-input"
+              />
+              <button 
+                type="button"
+                className="ai-button"
+                onClick={generateTags}
+                disabled={generatingTags}
+                title="Generate tags with AI"
+              >
+                {generatingTags ? '⏳' : '🤖'}
+              </button>
+            </div>
+            <small>Separate multiple tags with commas, or use AI to generate them</small>
+          </div>
+
+          <div className="modal-actions">
+            <button 
+              type="button" 
+              className="cancel-button"
+              onClick={closeModal}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="save-button"
+              disabled={saving}
+            >
+              {saving 
+                ? (editingBookmark ? 'Updating...' : 'Saving...') 
+                : (editingBookmark ? 'Update Bookmark' : 'Save Bookmark')
+              }
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

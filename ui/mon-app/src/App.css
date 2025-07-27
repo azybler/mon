@@ -229,14 +229,6 @@
     margin-bottom: 0.75rem;
   }
 
-  .modal-overlay {
-    padding: 0.5rem;
-  }
-
-  .modal-content {
-    max-height: 95vh;
-  }
-
   .modal-actions {
     flex-direction: column-reverse;
     gap: 0.5rem;
@@ -688,67 +680,6 @@
   text-decoration: underline;
 }
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal-content {
-  background-color: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 8px;
-  max-width: 800px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1rem 0 1rem;
-  margin-bottom: 1rem;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: var(--content-text);
-  font-size: 1.1rem;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  color: var(--content-text-secondary);
-  font-size: 1.3rem;
-  cursor: pointer;
-  padding: 0.2rem;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-close:hover {
-  background-color: var(--bg-tertiary);
-  color: var(--content-text);
-}
-
 .bookmark-form {
   padding: 0 1rem 1rem 1rem;
 }
@@ -1035,8 +966,6 @@
   font-style: italic;
   font-weight: normal;
 }
-
-/* Modal Styles */
 
 @media (max-width: 768px) {
   .search-section {
