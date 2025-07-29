@@ -508,6 +508,7 @@ const Bookmarks = () => {
         onSearchChange={handleSearchChange}
         onClearSearch={handleClearSearch}
         placeholder="Enter keywords to search... (use -word to exclude, or use advanced tag expressions e.g. ((#tag1 AND #tag2) OR NOT #tag3))"
+        tags={tags}
       />
 
       {bookmarks.length === 0 ? (
