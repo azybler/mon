@@ -167,6 +167,7 @@ func main() {
 	// Initialize handlers
 	bookmarkHandler := handlers.NewBookmarkHandler(db)
 	noteHandler := handlers.NewNoteHandler(db)
+	youtubeHandler := handlers.NewYoutubeHandler(db)
 
 	// Register bookmark API routes with CORS and gzip middleware
 	http.HandleFunc("/api/bookmark/create", corsGzipMiddleware(bookmarkHandler.NewBookmark))
@@ -181,6 +182,13 @@ func main() {
 	http.HandleFunc("/api/note/tag/list", corsGzipMiddleware(noteHandler.GetNoteTags))
 	http.HandleFunc("/api/note/edit/", corsGzipMiddleware(noteHandler.EditNote))
 	http.HandleFunc("/api/note/delete/", corsGzipMiddleware(noteHandler.DeleteNote))
+
+	// Register YouTube API routes with CORS and gzip middleware
+	http.HandleFunc("/api/youtube/create", corsGzipMiddleware(youtubeHandler.NewYoutubeVideo))
+	http.HandleFunc("/api/youtube/list", corsGzipMiddleware(youtubeHandler.GetYoutubeVideos))
+	http.HandleFunc("/api/youtube/tag/list", corsGzipMiddleware(youtubeHandler.GetYoutubeTags))
+	http.HandleFunc("/api/youtube/edit/", corsGzipMiddleware(youtubeHandler.EditYoutubeVideo))
+	http.HandleFunc("/api/youtube/delete/", corsGzipMiddleware(youtubeHandler.DeleteYoutubeVideo))
 
 	// Serve robots.txt to deny all crawlers
 	http.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import Home from 'pages/Home/Home'
 import Bookmarks from 'pages/Bookmarks/Bookmarks'
+import YoutubeWatchlist from 'pages/YoutubeWatchlist/YoutubeWatchlist'
 import Notes from 'pages/Notes/Notes'
 import Settings from 'pages/Settings/Settings'
 import NotFound from 'pages/NotFound/NotFound'
@@ -12,6 +13,7 @@ function App() {
   const navigationItems = [
     { id: 'home', label: 'Home', path: '/' },
     { id: 'bookmarks', label: 'Bookmarks', path: '/bookmarks' },
+    { id: 'youtube', label: 'YouTube Watchlist', path: '/youtube' },
     { id: 'notes', label: 'Notes', path: '/notes' },
     { id: 'settings', label: 'Settings', path: '/settings' }
   ]
@@ -65,6 +67,8 @@ function App() {
         return <Home />
       case 'bookmarks':
         return <Bookmarks />
+      case 'youtube':
+        return <YoutubeWatchlist />
       case 'notes':
         return <Notes />
       case 'settings':

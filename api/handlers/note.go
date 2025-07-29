@@ -285,8 +285,9 @@ func (h *NoteHandler) rebuildNoteTagCounts() error {
 			item := it.Item()
 			key := item.Key()
 
-			// Only process keys that start with "note_"
-			if len(key) >= 5 && string(key[:5]) == "note_" {
+			// Only process keys that start with "note_" and are note IDs (not tag counts)
+			keyStr := string(key)
+			if len(keyStr) >= 5 && strings.HasPrefix(keyStr, "note_") && keyStr != "note_tag_counts" {
 				err := item.Value(func(val []byte) error {
 					var note Note
 					if err := json.Unmarshal(val, &note); err != nil {

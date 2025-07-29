@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import WysiwygEditor from 'components/WysiwygEditor/WysiwygEditor'
 import TagsFilter from 'components/TagsFilter/TagsFilter'
 import SearchInput from 'components/SearchInput/SearchInput'
 import Modal from 'components/Modal/Modal'
 
-const Notes = () => {
+const YoutubeWatchlist = () => {
   // Debounce hook for performance optimization
   function useDebounce(value, delay) {
     const [debouncedValue, setDebouncedValue] = useState(value)
@@ -22,22 +21,22 @@ const Notes = () => {
     return debouncedValue
   }
 
-  const [notes, setNotes] = useState([])
+  const [videos, setVideos] = useState([])
   const [tags, setTags] = useState([])
-  const [selectedTags, setSelectedTags] = useState([]) // New state for selected tags
+  const [selectedTags, setSelectedTags] = useState([])
   const [filterMode, setFilterMode] = useState('include') // 'include' or 'exclude'
-  const [searchKeywords, setSearchKeywords] = useState('') // New state for keyword search
+  const [searchKeywords, setSearchKeywords] = useState('')
   const [loading, setLoading] = useState(true)
   const [tagsLoading, setTagsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showModal, setShowModal] = useState(false)
-  const [editingNote, setEditingNote] = useState(null)
+  const [editingVideo, setEditingVideo] = useState(null)
   const [saving, setSaving] = useState(false)
   const [generatingTags, setGeneratingTags] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
+    url: '',
     tags: ''
   })
 
@@ -46,19 +45,35 @@ const Notes = () => {
   const debouncedFilterMode = useDebounce(filterMode, 300)
   const debouncedSearchKeywords = useDebounce(searchKeywords, 300)
 
+  // Extract YouTube video ID from URL
+  const extractVideoId = (url) => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/,
+    ]
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match) {
+        return match[1]
+      }
+    }
+    return null
+  }
+
   // Initial data fetch - only runs once
   useEffect(() => {
     const initializeData = async () => {
       try {
-        // Fetch both tags and notes in parallel
-        const [tagsResponse, notesResponse] = await Promise.all([
-          fetch('http://localhost:8080/api/note/tag/list'),
-          fetch('http://localhost:8080/api/note/list')
+        // Fetch both tags and videos in parallel
+        const [tagsResponse, videosResponse] = await Promise.all([
+          fetch('http://localhost:8080/api/youtube/tag/list'),
+          fetch('http://localhost:8080/api/youtube/list')
         ])
         
-        const [tagsData, notesData] = await Promise.all([
+        const [tagsData, videosData] = await Promise.all([
           tagsResponse.json(),
-          notesResponse.json()
+          videosResponse.json()
         ])
         
         if (tagsData.success) {
@@ -66,13 +81,12 @@ const Notes = () => {
         } else {
           console.error('Failed to fetch tags:', tagsData.message)
         }
-
-        if (notesData.success) {
-          // Filter out notes with empty id
-          setNotes(notesData.data || [])
+        
+        if (videosData.success) {
+          setVideos(videosData.data || [])
           setError(null)
         } else {
-          setError(notesData.message || 'Failed to fetch notes')
+          setError(videosData.message || 'Failed to fetch YouTube videos')
         }
       } catch (err) {
         setError('Error connecting to the server')
@@ -87,29 +101,29 @@ const Notes = () => {
     initializeData()
   }, [])
 
-  const fetchNotes = useCallback(async () => {
+  const fetchVideos = useCallback(async () => {
     try {
       // Only show loading spinner for non-search operations to avoid focus loss
       if (!debouncedSearchKeywords.trim()) {
         setLoading(true)
       }
       
-      // Build URL with tag filters if any are selected
-      let url = 'http://localhost:8080/api/note/list'
+      // Build URL with different filtering approaches
+      let url = 'http://localhost:8080/api/youtube/list'
       const params = new URLSearchParams()
       
       if (filterMode === 'include' && selectedTags.length > 0) {
-        // Include mode: send selected tags to show notes with any of these tags
+        // Include mode: send selected tags to show videos with any of these tags
         params.append('tags', selectedTags.join(','))
       } else if (filterMode === 'exclude' && tags.length > 0) {
-        // Exclude mode: send unselected tags to exclude notes with these tags
+        // Exclude mode: send unselected tags to exclude videos with these tags
         const allTagNames = tags.map(tagString => tagString.split(',')[0])
         const unselectedTags = allTagNames.filter(tag => !selectedTags.includes(tag))
         if (unselectedTags.length > 0) {
           params.append('exclude_tags', unselectedTags.join(','))
         }
       }
-      
+
       const tokens = debouncedSearchKeywords.split(' ').filter(word => word.trim() !== '').map(word => word.trim())
       
       // find the first token that starts with a open round bracket "("
@@ -143,33 +157,33 @@ const Notes = () => {
       }
       
       const response = await fetch(url)
-      const notesData = await response.json()
+      const data = await response.json()
       
-      if (notesData.success) {
-        setNotes(notesData.data || [])
+      if (data.success) {
+        setVideos(data.data || [])
         setError(null)
       } else {
-        setError(notesData.message || 'Failed to fetch notes')
+        setError(data.message || 'Failed to fetch YouTube videos')
       }
     } catch (err) {
       setError('Error connecting to the server')
-      console.error('Error fetching notes:', err)
+      console.error('Error fetching YouTube videos:', err)
     } finally {
       setLoading(false)
     }
   }, [selectedTags, filterMode, tags, debouncedSearchKeywords])
 
-  // Fetch notes when filters change (but only after initial load)
+  // Fetch videos when filters change (but only after initial load)
   useEffect(() => {
     if (isInitialized) {
-      fetchNotes()
+      fetchVideos()
     }
-  }, [debouncedSelectedTags, debouncedFilterMode, debouncedSearchKeywords, isInitialized, fetchNotes])
+  }, [debouncedSelectedTags, debouncedFilterMode, debouncedSearchKeywords, isInitialized, fetchVideos])
 
   const fetchTags = useCallback(async () => {
     try {
       setTagsLoading(true)
-      const response = await fetch('http://localhost:8080/api/note/tag/list')
+      const response = await fetch('http://localhost:8080/api/youtube/tag/list')
       const data = await response.json()
       
       if (data.success) {
@@ -184,18 +198,18 @@ const Notes = () => {
     }
   }, [])
 
-  const createNote = async (e) => {
+  const createVideo = async (e) => {
     e.preventDefault()
     
-    // Function to strip HTML tags for validation
-    const stripHtml = (html) => {
-      const tmp = document.createElement('div')
-      tmp.innerHTML = html
-      return tmp.textContent || tmp.innerText || ''
+    if (!formData.title.trim() || !formData.url.trim()) {
+      alert('Title and URL are required')
+      return
     }
-    
-    if (!formData.title.trim() || !stripHtml(formData.description).trim()) {
-      alert('Title and Description are required')
+
+    // Validate YouTube URL
+    const videoId = extractVideoId(formData.url)
+    if (!videoId) {
+      alert('Please provide a valid YouTube URL')
       return
     }
 
@@ -209,11 +223,11 @@ const Notes = () => {
         .map(tag => tag.toLowerCase())
         .filter(tag => tag.length > 0)
 
-      const url = editingNote 
-        ? `http://localhost:8080/api/note/edit/${editingNote.id}`
-        : 'http://localhost:8080/api/note/create'
-
-      const method = editingNote ? 'PUT' : 'POST'
+      const url = editingVideo 
+        ? `http://localhost:8080/api/youtube/edit/${editingVideo.id}`
+        : 'http://localhost:8080/api/youtube/create'
+      
+      const method = editingVideo ? 'PUT' : 'POST'
 
       const response = await fetch(url, {
         method: method,
@@ -222,7 +236,7 @@ const Notes = () => {
         },
         body: JSON.stringify({
           title: formData.title.trim(),
-          description: formData.description.trim(),
+          url: formData.url.trim(),
           tags: tags
         })
       })
@@ -231,19 +245,19 @@ const Notes = () => {
       
       if (data.success) {
         // Reset form
-        setFormData({ title: '', description: '', tags: '' })
-        setEditingNote(null)
+        setFormData({ title: '', url: '', tags: '' })
+        setEditingVideo(null)
         setShowModal(false)
         
         // Optimistically update the UI without refetching everything
-        if (editingNote) {
-          // Update existing note in state
-          setNotes(prev => prev.map(b => 
-            b.id === editingNote.id ? data.data : b
+        if (editingVideo) {
+          // Update existing video in state
+          setVideos(prev => prev.map(v => 
+            v.id === editingVideo.id ? data.data : v
           ))
         } else {
-          // Add new note to state
-          setNotes(prev => [data.data, ...prev])
+          // Add new video to state
+          setVideos(prev => [data.data, ...prev])
         }
         
         // Only refetch tags if we added/changed tags
@@ -251,44 +265,37 @@ const Notes = () => {
           .split(',')
           .map(tag => tag.trim())
           .filter(tag => tag.length > 0)
-
-        const oldTags = editingNote?.tags || []
+        
+        const oldTags = editingVideo?.tags || []
         const tagsChanged = JSON.stringify(newTags.sort()) !== JSON.stringify(oldTags.sort())
         
         if (tagsChanged) {
           fetchTags()
         }
       } else {
-        alert(data.message || `Failed to ${editingNote ? 'update' : 'create'} note`)
+        alert(data.message || `Failed to ${editingVideo ? 'update' : 'create'} YouTube video`)
       }
     } catch (err) {
-      alert(`Error ${editingNote ? 'updating' : 'creating'} note: ` + err.message)
-      console.error(`Error ${editingNote ? 'updating' : 'creating'} note:`, err)
+      alert(`Error ${editingVideo ? 'updating' : 'creating'} YouTube video: ` + err.message)
+      console.error(`Error ${editingVideo ? 'updating' : 'creating'} YouTube video:`, err)
     } finally {
       setSaving(false)
     }
   }
 
-  const editNote = (note) => {
-    setEditingNote(note)
+  const editVideo = (video) => {
+    setEditingVideo(video)
     setFormData({
-      title: note.title,
-      description: note.description,
-      tags: note.tags ? note.tags.join(', ') : ''
+      title: video.title,
+      url: video.url,
+      tags: video.tags ? video.tags.join(', ') : ''
     })
     setShowModal(true)
   }
 
   const generateTags = async () => {
-    // Function to strip HTML tags for validation
-    const stripHtml = (html) => {
-      const tmp = document.createElement('div')
-      tmp.innerHTML = html
-      return tmp.textContent || tmp.innerText || ''
-    }
-    
-    if (!formData.title.trim() || !stripHtml(formData.description).trim()) {
-      alert('Please enter a title and description first')
+    if (!formData.title.trim() || !formData.url.trim()) {
+      alert('Please enter a title and URL first')
       return
     }
 
@@ -308,9 +315,7 @@ const Notes = () => {
         return
       }
 
-      // Strip HTML from description for AI processing
-      const cleanDescription = stripHtml(formData.description)
-      const prompt = `${aiConfig.tagPrompt}\n\nTitle: ${formData.title}\nDescription: ${cleanDescription}`
+      const prompt = `${aiConfig.tagPrompt}\n\nTitle: ${formData.title}\nURL: ${formData.url}`
       
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -318,7 +323,7 @@ const Notes = () => {
           'Authorization': `Bearer ${aiConfig.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': window.location.origin,
-          'X-Title': 'Mon Note Manager'
+          'X-Title': 'Mon YouTube Watchlist'
         },
         body: JSON.stringify({
           model: aiConfig.model,
@@ -376,36 +381,40 @@ const Notes = () => {
 
   const closeModal = () => {
     setShowModal(false)
-    setEditingNote(null)
-    setFormData({ title: '', description: '', tags: '' })
+    setEditingVideo(null)
+    setFormData({ title: '', url: '', tags: '' })
   }
 
-  const deleteNote = async (note) => {
-    if (!confirm(`Are you sure you want to delete "${note.title}"?`)) {
+  const openVideo = (url) => {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const deleteVideo = async (video) => {
+    if (!confirm(`Are you sure you want to delete "${video.title}"?`)) {
       return
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/note/delete/${note.id}`, {
+      const response = await fetch(`http://localhost:8080/api/youtube/delete/${video.id}`, {
         method: 'DELETE',
       })
 
       const data = await response.json()
       
       if (data.success) {
-        // Optimistically remove note from state
-        setNotes(prev => prev.filter(b => b.id !== note.id))
-
-        // Only refetch tags if the deleted note had tags
-        if (note.tags && note.tags.length > 0) {
+        // Optimistically remove video from state
+        setVideos(prev => prev.filter(v => v.id !== video.id))
+        
+        // Only refetch tags if the deleted video had tags
+        if (video.tags && video.tags.length > 0) {
           fetchTags()
         }
       } else {
-        alert(data.message || 'Failed to delete note')
+        alert(data.message || 'Failed to delete YouTube video')
       }
     } catch (err) {
-      alert('Error deleting note: ' + err.message)
-      console.error('Error deleting note:', err)
+      alert('Error deleting YouTube video: ' + err.message)
+      console.error('Error deleting YouTube video:', err)
     }
   }
 
@@ -455,8 +464,8 @@ const Notes = () => {
   if (loading) {
     return (
       <div className="section-content">
-        <h2>Notes</h2>
-        <p>Loading your notes...</p>
+        <h2>YouTube Watchlist</h2>
+        <p>Loading your YouTube videos...</p>
       </div>
     )
   }
@@ -464,10 +473,10 @@ const Notes = () => {
   if (error) {
     return (
       <div className="section-content">
-        <h2>Notes</h2>
+        <h2>YouTube Watchlist</h2>
         <div className="error-message">
           <p>Error: {error}</p>
-          <button onClick={fetchNotes} className="retry-button">
+          <button onClick={fetchVideos} className="retry-button">
             Retry
           </button>
         </div>
@@ -477,30 +486,30 @@ const Notes = () => {
 
   return (
     <div className="section-content">
-      <div className="notes-header">
+      <div className="bookmarks-header">
         <div>
           {filterMode === 'include' && selectedTags.length > 0 ? (
             <>
-              {notes.length} Note{notes.length !== 1 ? 's' : ''} 
-              <span className="filter-indicator"> (showing notes with {selectedTags.length} tag{selectedTags.length !== 1 ? 's' : ''})</span>
+              {videos.length} Video{videos.length !== 1 ? 's' : ''} 
+              <span className="filter-indicator"> (showing videos with {selectedTags.length} tag{selectedTags.length !== 1 ? 's' : ''})</span>
             </>
           ) : filterMode === 'exclude' && selectedTags.length < tags.length ? (
             <>
-              {notes.length} Note{notes.length !== 1 ? 's' : ''} 
+              {videos.length} Video{videos.length !== 1 ? 's' : ''} 
               <span className="filter-indicator"> (excluding {tags.length - selectedTags.length} tag{tags.length - selectedTags.length !== 1 ? 's' : ''})</span>
             </>
           ) : (
-            `${notes.length} Note${notes.length !== 1 ? 's' : ''}`
+            `${videos.length} Video${videos.length !== 1 ? 's' : ''}`
           )}
           {searchKeywords && (
             <span className="search-indicator"> (searching: "{searchKeywords}")</span>
           )}
         </div>
         <button 
-          className="add-note-button"
+          className="add-bookmark-button"
           onClick={() => setShowModal(true)}
         >
-          + Add Note
+          + Add Video
         </button>
       </div>
 
@@ -510,7 +519,7 @@ const Notes = () => {
         selectedTags={selectedTags}
         filterMode={filterMode}
         tagsLoading={tagsLoading}
-        itemType="note"
+        itemType="video"
         onToggleTagFilter={toggleTagFilter}
         onClearTagFilters={clearTagFilters}
         onToggleFilterMode={toggleFilterMode}
@@ -525,48 +534,66 @@ const Notes = () => {
         tags={tags}
       />
 
-      {notes.length === 0 ? (
+      {videos.length === 0 ? (
         <div className="empty-state">
-          <p>No notes found. Start adding some notes to see them here!</p>
+          <p>No YouTube videos found. Start adding some videos to see them here!</p>
           <button 
-            className="add-first-note-button"
+            className="add-first-bookmark-button"
             onClick={() => setShowModal(true)}
           >
-            Add Your First Note
+            Add Your First Video
           </button>
         </div>
       ) : (
-        <div className="notes-grid">
-          {notes.map((note) => (
-            <div key={note.id} className="note-card">
-              <div className="note-header">
-                <h4 className="note-title">{note.title}</h4>
-                <div className="note-actions">
+        <div className="bookmarks-grid">
+          {videos.map((video) => (
+            <div key={video.id} className="bookmark-card youtube-video-card">
+              <div className="bookmark-header">
+                <h4 className="bookmark-title" onClick={() => openVideo(video.url)}>{video.title}</h4>
+                <div className="bookmark-actions">
                   <button 
-                    className="note-edit"
-                    onClick={() => editNote(note)}
-                    title="Edit note"
+                    className="bookmark-edit"
+                    onClick={() => editVideo(video)}
+                    title="Edit video"
                   >
                     ✏️
                   </button>
                   <button 
-                    className="note-delete"
-                    onClick={() => deleteNote(note)}
-                    title="Delete note"
+                    className="bookmark-delete"
+                    onClick={() => deleteVideo(video)}
+                    title="Delete video"
                   >
                     🗑️
                   </button>
                 </div>
               </div>
               
-              <div className="note-description">
-                <div dangerouslySetInnerHTML={{ __html: note.description }} />
+              {/* YouTube Embed */}
+              <div className="youtube-embed-container">
+                <iframe
+                  src={`https://www.youtube.com/embed/${video.video_id}`}
+                  title={video.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                ></iframe>
               </div>
 
-              {note.tags && note.tags.length > 0 && (
-                <div className="note-tags">
-                  {note.tags.map((tag, index) => (
-                    <span key={index} className="note-tag">
+              <div className="bookmark-url">
+                <a 
+                  href={video.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  {video.url}
+                </a>
+              </div>
+
+              {video.tags && video.tags.length > 0 && (
+                <div className="bookmark-tags">
+                  {video.tags.map((tag, index) => (
+                    <span key={index} className="bookmark-tag">
                       {tag}
                     </span>
                   ))}
@@ -581,8 +608,8 @@ const Notes = () => {
       <Modal
         isOpen={showModal}
         onClose={closeModal}
-        title={editingNote ? 'Edit Note' : 'Add New Note'}
-        size="large"
+        title={editingVideo ? 'Edit YouTube Video' : 'Add New YouTube Video'}
+        size="medium"
         actions={
           <>
             <button 
@@ -597,17 +624,17 @@ const Notes = () => {
               type="submit" 
               className="save-button"
               disabled={saving}
-              form="note-form"
+              form="youtube-form"
             >
               {saving 
-                ? (editingNote ? 'Updating...' : 'Saving...') 
-                : (editingNote ? 'Update Note' : 'Save Note')
+                ? (editingVideo ? 'Updating...' : 'Saving...') 
+                : (editingVideo ? 'Update Video' : 'Save Video')
               }
             </button>
           </>
         }
       >
-        <form id="note-form" onSubmit={createNote} className="note-form">
+        <form id="youtube-form" onSubmit={createVideo} className="bookmark-form">
           <div className="form-group">
             <label htmlFor="title">Title *</label>
             <input
@@ -616,18 +643,23 @@ const Notes = () => {
               name="title"
               value={formData.title}
               onChange={handleInputChange}
-              placeholder="Enter note title"
+              placeholder="Enter video title"
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="description">Description</label>
-            <WysiwygEditor
-              value={formData.description}
-              onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
-              placeholder="Enter note description with formatting..."
+            <label htmlFor="url">YouTube URL *</label>
+            <input
+              type="url"
+              id="url"
+              name="url"
+              value={formData.url}
+              onChange={handleInputChange}
+              placeholder="https://www.youtube.com/watch?v=..."
+              required
             />
+            <small>Please provide a valid YouTube video URL</small>
           </div>
 
           <div className="form-group">
@@ -639,7 +671,7 @@ const Notes = () => {
                 name="tags"
                 value={formData.tags}
                 onChange={handleInputChange}
-                placeholder="work, reference, tutorial (comma separated)"
+                placeholder="tutorial, programming, music (comma separated)"
                 className="tags-input"
               />
               <button 
@@ -660,4 +692,4 @@ const Notes = () => {
   )
 }
 
-export default Notes
+export default YoutubeWatchlist

@@ -300,8 +300,9 @@ func (h *BookmarkHandler) rebuildTagCounts() error {
 			item := it.Item()
 			key := item.Key()
 
-			// Only process keys that start with "bookmark_"
-			if len(key) >= 9 && string(key[:9]) == "bookmark_" {
+			// Only process keys that start with "bookmark_" and are bookmark IDs (not tag counts)
+			keyStr := string(key)
+			if len(keyStr) >= 9 && strings.HasPrefix(keyStr, "bookmark_") && keyStr != "bookmark_tag_counts" {
 				err := item.Value(func(val []byte) error {
 					var bookmark Bookmark
 					if err := json.Unmarshal(val, &bookmark); err != nil {
