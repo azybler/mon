@@ -38,7 +38,7 @@ const Bookmarks = () => {
   const [formData, setFormData] = useState({
     title: '',
     url: '',
-    tags: ''
+    tags: []
   })
 
   // Debounce filter changes to prevent excessive API calls
@@ -194,12 +194,8 @@ const Bookmarks = () => {
     try {
       setSaving(true)
       
-      // Parse tags from comma-separated string
-      const tags = formData.tags
-        .split(',')
-        .map(tag => tag.trim())
-        .map(tag => tag.toLowerCase())
-        .filter(tag => tag.length > 0)
+      // Use tags array directly (already parsed)
+      const tags = formData.tags.map(tag => tag.toLowerCase())
 
       const url = editingBookmark 
         ? `http://localhost:8080/api/bookmark/edit/${editingBookmark.id}`
@@ -223,7 +219,7 @@ const Bookmarks = () => {
       
       if (data.success) {
         // Reset form
-        setFormData({ title: '', url: '', tags: '' })
+        setFormData({ title: '', url: '', tags: [] })
         setEditingBookmark(null)
         setShowModal(false)
         
@@ -240,10 +236,6 @@ const Bookmarks = () => {
         
         // Only refetch tags if we added/changed tags
         const newTags = formData.tags
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag.length > 0)
-        
         const oldTags = editingBookmark?.tags || []
         const tagsChanged = JSON.stringify(newTags.sort()) !== JSON.stringify(oldTags.sort())
         
@@ -266,7 +258,7 @@ const Bookmarks = () => {
     setFormData({
       title: bookmark.title,
       url: bookmark.url,
-      tags: bookmark.tags ? bookmark.tags.join(', ') : ''
+      tags: bookmark.tags || []
     })
     setShowModal(true)
   }
@@ -360,7 +352,7 @@ const Bookmarks = () => {
   const closeModal = () => {
     setShowModal(false)
     setEditingBookmark(null)
-    setFormData({ title: '', url: '', tags: '' })
+    setFormData({ title: '', url: '', tags: [] })
   }
 
   const openBookmark = (url) => {
@@ -632,13 +624,11 @@ const Bookmarks = () => {
             <label htmlFor="tags">Tags</label>
             <div className="tags-input-container">
               <TagAutocompleteInput
-                id="tags"
-                name="tags"
-                value={formData.tags}
-                onChange={(value) => setFormData(prev => ({ ...prev, tags: value }))}
-                placeholder="work, reference, tutorial (comma separated) - type # for autocomplete"
+                selectedTags={formData.tags}
+                onTagsChange={(newTags) => setFormData(prev => ({ ...prev, tags: newTags }))}
+                availableTags={tags}
+                placeholder="Add tags..."
                 className="tags-input"
-                tags={tags}
               />
               <button
                 type="button"
@@ -650,7 +640,7 @@ const Bookmarks = () => {
                 {generatingTags ? '⏳' : '🤖'}
               </button>
             </div>
-            <small>Separate multiple tags with commas, type # for autocomplete, or use AI to generate them</small>
+            <small>Type to add tags, press Enter to create new ones, or use AI to generate them</small>
           </div>
         </form>
       </Modal>

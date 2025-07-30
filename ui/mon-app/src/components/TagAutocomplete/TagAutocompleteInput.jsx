@@ -4,13 +4,13 @@ import './TagAutocomplete.css';
 
 /**
  * Reusable TagAutocompleteInput component
- * Provides tag autocomplete functionality for any input field
+ * Provides tag input functionality with visual tag chips
  */
 const TagAutocompleteInput = ({
-  value,
-  onChange,
-  tags = [],
-  placeholder = "Enter text...",
+  selectedTags = [],
+  onTagsChange,
+  availableTags = [],
+  placeholder = "Add tags...",
   className = "",
   disabled = false,
   ...inputProps
@@ -18,30 +18,62 @@ const TagAutocompleteInput = ({
   const inputRef = useRef(null);
   
   const {
+    inputValue,
     showDropdown,
     selectedIndex,
     filteredTags,
+    editingIndex,
     dropdownRef,
     handleInputChange,
     handleKeyDown,
     handleTagClick,
-    handleTagMouseEnter
-  } = useTagAutocomplete(tags, onChange, inputRef);
+    handleTagMouseEnter,
+    removeTag,
+    startEditingTag
+  } = useTagAutocomplete(availableTags, selectedTags, onTagsChange, inputRef);
 
   return (
     <div className="tag-autocomplete-container">
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={handleInputChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className={`tag-autocomplete-input ${className}`}
-        disabled={disabled}
-        {...inputProps}
-      />
+      <div className="tag-input-wrapper">
+        {/* Render selected tags as chips */}
+        {selectedTags.map((tag, index) => (
+          <div
+            key={`${tag}-${index}`}
+            className={`tag-chip ${editingIndex === index ? 'editing' : ''}`}
+          >
+            <span
+              className="tag-text"
+              onClick={() => !disabled && startEditingTag(index)}
+            >
+              {tag}
+            </span>
+            <button
+              type="button"
+              className="tag-remove"
+              onClick={() => !disabled && removeTag(index)}
+              disabled={disabled}
+              aria-label={`Remove ${tag} tag`}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        
+        {/* Input field */}
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder={selectedTags.length === 0 ? placeholder : ""}
+          className={`tag-autocomplete-input ${className}`}
+          disabled={disabled}
+          {...inputProps}
+        />
+      </div>
       
+      {/* Autocomplete dropdown */}
       {showDropdown && (
         <div ref={dropdownRef} className="tag-autocomplete-dropdown">
           {filteredTags.map((tag, index) => (
@@ -51,7 +83,7 @@ const TagAutocompleteInput = ({
               onClick={() => handleTagClick(tag)}
               onMouseEnter={() => handleTagMouseEnter(index)}
             >
-              #{tag}
+              {tag}
             </div>
           ))}
         </div>

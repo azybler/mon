@@ -1,4 +1,110 @@
-/* Tag Autocomplete Dropdown */
+/* Container for the entire tag input component */
+.tag-autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Wrapper for tags and input */
+.tag-input-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  min-height: 2.5rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.tag-input-wrapper:focus-within {
+  border-color: #646cff;
+  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.1);
+}
+
+/* Individual tag chips */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  background-color: #646cff;
+  color: white;
+  border-radius: 16px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  max-width: 200px;
+  transition: all 0.2s ease;
+}
+
+.tag-chip.editing {
+  background-color: #ffa500;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.tag-text {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.tag-text:hover {
+  text-decoration: underline;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-left: 0.25rem;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.tag-remove:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.tag-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Input field within the wrapper */
+.tag-autocomplete-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--content-text);
+  font-size: 0.9rem;
+  flex: 1;
+  min-width: 120px;
+  padding: 0.25rem 0;
+}
+
+.tag-autocomplete-input::placeholder {
+  color: var(--content-text-secondary);
+}
+
+/* Autocomplete dropdown */
 .tag-autocomplete-dropdown {
   position: absolute;
   top: 100%;
@@ -12,6 +118,7 @@
   z-index: 1000;
   max-height: 200px;
   overflow-y: auto;
+  margin-top: 2px;
 }
 
 .tag-autocomplete-item {
@@ -21,14 +128,15 @@
   transition: background-color 0.1s ease;
   font-size: 0.85rem;
   border-bottom: 1px solid var(--input-border);
+  display: flex;
+  align-items: center;
 }
 
 .tag-autocomplete-item:last-child {
   border-bottom: none;
 }
 
-.tag-autocomplete-item:hover,
-.tag-autocomplete-item.selected {
+.tag-autocomplete-item:hover {
   background-color: var(--bg-tertiary);
 }
 
@@ -55,37 +163,36 @@
   background: var(--content-text);
 }
 
-/* Container for input with autocomplete */
-.tag-autocomplete-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 1;
-}
-
-.tag-autocomplete-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background-color: var(--input-bg);
-  border: 1px solid var(--input-border);
-  border-radius: 6px;
-  color: var(--content-text);
-  font-size: 0.9rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  box-sizing: border-box;
-}
-
-.tag-autocomplete-input:focus {
-  outline: none;
-  border-color: #646cff;
-  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.1);
-}
-
-.tag-autocomplete-input::placeholder {
-  color: var(--content-text-secondary);
-}
-
+/* Responsive design */
 @media (max-width: 768px) {
+  .tag-input-wrapper {
+    padding: 0.4rem;
+    min-height: 2.2rem;
+    gap: 0.3rem;
+  }
+
+  .tag-chip {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 12px;
+    max-width: 150px;
+  }
+
+  .tag-text {
+    max-width: 100px;
+  }
+
+  .tag-remove {
+    width: 14px;
+    height: 14px;
+    font-size: 1rem;
+  }
+
+  .tag-autocomplete-input {
+    font-size: 0.85rem;
+    min-width: 100px;
+  }
+
   .tag-autocomplete-dropdown {
     max-height: 150px;
   }
@@ -94,9 +201,32 @@
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
   }
-  
-  .tag-autocomplete-input {
-    padding: 0.6rem 0.8rem;
-    font-size: 0.85rem;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .tag-chip {
+    background-color: #5a5fcf;
   }
+  
+  .tag-chip.editing {
+    background-color: #e6940a;
+  }
+}
+
+/* Focus states for accessibility */
+.tag-remove:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 1px;
+}
+
+.tag-text:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+/* Empty state styling */
+.tag-input-wrapper:empty .tag-autocomplete-input {
+  min-width: 200px;
 }
