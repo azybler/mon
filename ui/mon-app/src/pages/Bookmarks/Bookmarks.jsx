@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import TagsFilter from 'components/TagsFilter/TagsFilter'
 import SearchInput from 'components/SearchInput/SearchInput'
 import Modal from 'components/Modal/Modal'
+import TagAutocompleteInput from 'components/TagAutocomplete/TagAutocompleteInput'
 
 const Bookmarks = () => {
   // Debounce hook for performance optimization
@@ -630,16 +631,16 @@ const Bookmarks = () => {
           <div className="form-group">
             <label htmlFor="tags">Tags</label>
             <div className="tags-input-container">
-              <input
-                type="text"
+              <TagAutocompleteInput
                 id="tags"
                 name="tags"
                 value={formData.tags}
-                onChange={handleInputChange}
-                placeholder="work, reference, tutorial (comma separated)"
+                onChange={(value) => setFormData(prev => ({ ...prev, tags: value }))}
+                placeholder="work, reference, tutorial (comma separated) - type # for autocomplete"
                 className="tags-input"
+                tags={tags}
               />
-              <button 
+              <button
                 type="button"
                 className="ai-button"
                 onClick={generateTags}
@@ -649,7 +650,7 @@ const Bookmarks = () => {
                 {generatingTags ? '⏳' : '🤖'}
               </button>
             </div>
-            <small>Separate multiple tags with commas, or use AI to generate them</small>
+            <small>Separate multiple tags with commas, type # for autocomplete, or use AI to generate them</small>
           </div>
         </form>
       </Modal>
