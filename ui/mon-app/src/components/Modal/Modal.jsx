@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './Modal.css'
 
 const Modal = ({ 
@@ -11,6 +11,20 @@ const Modal = ({
   size = 'medium' // 'small', 'medium', 'large'
 }) => {
   const [mouseDownOnOverlay, setMouseDownOnOverlay] = useState(false)
+
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null
 
