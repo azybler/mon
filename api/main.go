@@ -222,7 +222,7 @@ func main() {
 	}
 
 	// Start the server
-	port := ":8080"
+	port := ":8081"
 	fmt.Printf("🚀 Server starting on port %s\n", port)
 	fmt.Printf("🌐 App available at: http://localhost%s\n", port)
 

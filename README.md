@@ -54,7 +54,7 @@ A self-hosted web application to organize your life. Mon provides a clean, moder
    ```
 
 4. **Access the app**
-   Open your browser and go to `http://localhost:8080`
+   Open your browser and go to `http://localhost:8081`
 
 ### Development Mode
 
@@ -65,7 +65,7 @@ For active development with hot reloading:
 ```
 
 This will start both the backend and frontend development servers:
-- Backend API: `http://localhost:8080`
+- Backend API: `http://localhost:8081`
 - Frontend (with hot reload): `http://localhost:5173`
 
 To stop the development servers, press `Ctrl+C`.
@@ -150,7 +150,7 @@ Mon uses BadgerDB, an embedded key-value database written in Go. Your data is st
 
 ## Configuration
 
-The application runs on port 8080 by default. To change this, modify the `port` variable in `api/main.go`.
+The application runs on port 8081 by default. To change this, modify the `port` variable in `api/main.go`.
 
 ## Contributing
 

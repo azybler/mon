@@ -52,8 +52,8 @@ const Notes = () => {
       try {
         // Fetch both tags and notes in parallel
         const [tagsResponse, notesResponse] = await Promise.all([
-          fetch('http://localhost:8080/api/note/tag/list'),
-          fetch('http://localhost:8080/api/note/list')
+          fetch('http://localhost:8081/api/note/tag/list'),
+          fetch('http://localhost:8081/api/note/list')
         ])
         
         const [tagsData, notesData] = await Promise.all([
@@ -95,7 +95,7 @@ const Notes = () => {
       }
       
       // Build URL with tag filters if any are selected
-      let url = 'http://localhost:8080/api/note/list'
+      let url = 'http://localhost:8081/api/note/list'
       const params = new URLSearchParams()
       
       if (filterMode === 'include' && selectedTags.length > 0) {
@@ -169,7 +169,7 @@ const Notes = () => {
   const fetchTags = useCallback(async () => {
     try {
       setTagsLoading(true)
-      const response = await fetch('http://localhost:8080/api/note/tag/list')
+      const response = await fetch('http://localhost:8081/api/note/tag/list')
       const data = await response.json()
       
       if (data.success) {
@@ -210,8 +210,8 @@ const Notes = () => {
         .filter(tag => tag.length > 0)
 
       const url = editingNote 
-        ? `http://localhost:8080/api/note/edit/${editingNote.id}`
-        : 'http://localhost:8080/api/note/create'
+        ? `http://localhost:8081/api/note/edit/${editingNote.id}`
+        : 'http://localhost:8081/api/note/create'
 
       const method = editingNote ? 'PUT' : 'POST'
 
@@ -386,7 +386,7 @@ const Notes = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/note/delete/${note.id}`, {
+      const response = await fetch(`http://localhost:8081/api/note/delete/${note.id}`, {
         method: 'DELETE',
       })
 

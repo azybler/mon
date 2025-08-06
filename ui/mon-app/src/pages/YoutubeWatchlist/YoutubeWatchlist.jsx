@@ -67,8 +67,8 @@ const YoutubeWatchlist = () => {
       try {
         // Fetch both tags and videos in parallel
         const [tagsResponse, videosResponse] = await Promise.all([
-          fetch('http://localhost:8080/api/youtube/tag/list'),
-          fetch('http://localhost:8080/api/youtube/list')
+          fetch('http://localhost:8081/api/youtube/tag/list'),
+          fetch('http://localhost:8081/api/youtube/list')
         ])
         
         const [tagsData, videosData] = await Promise.all([
@@ -109,7 +109,7 @@ const YoutubeWatchlist = () => {
       }
       
       // Build URL with different filtering approaches
-      let url = 'http://localhost:8080/api/youtube/list'
+      let url = 'http://localhost:8081/api/youtube/list'
       const params = new URLSearchParams()
       
       if (filterMode === 'include' && selectedTags.length > 0) {
@@ -183,7 +183,7 @@ const YoutubeWatchlist = () => {
   const fetchTags = useCallback(async () => {
     try {
       setTagsLoading(true)
-      const response = await fetch('http://localhost:8080/api/youtube/tag/list')
+      const response = await fetch('http://localhost:8081/api/youtube/tag/list')
       const data = await response.json()
       
       if (data.success) {
@@ -224,8 +224,8 @@ const YoutubeWatchlist = () => {
         .filter(tag => tag.length > 0)
 
       const url = editingVideo 
-        ? `http://localhost:8080/api/youtube/edit/${editingVideo.id}`
-        : 'http://localhost:8080/api/youtube/create'
+        ? `http://localhost:8081/api/youtube/edit/${editingVideo.id}`
+        : 'http://localhost:8081/api/youtube/create'
       
       const method = editingVideo ? 'PUT' : 'POST'
 
@@ -395,7 +395,7 @@ const YoutubeWatchlist = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/youtube/delete/${video.id}`, {
+      const response = await fetch(`http://localhost:8081/api/youtube/delete/${video.id}`, {
         method: 'DELETE',
       })
 

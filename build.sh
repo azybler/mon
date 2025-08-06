@@ -26,4 +26,4 @@ CGO_CFLAGS="-I/opt/homebrew/include" CGO_LDFLAGS="-L/opt/homebrew/lib" go build 
 
 echo "✅ Build complete!"
 echo "🚀 To run the application: cd api && ./mon-api"
-echo "📱 The app will be available at: http://localhost:8080"
+echo "📱 The app will be available at: http://localhost:8081"

@@ -52,8 +52,8 @@ const Bookmarks = () => {
       try {
         // Fetch both tags and bookmarks in parallel
         const [tagsResponse, bookmarksResponse] = await Promise.all([
-          fetch('http://localhost:8080/api/bookmark/tag/list'),
-          fetch('http://localhost:8080/api/bookmark/list')
+          fetch('http://localhost:8081/api/bookmark/tag/list'),
+          fetch('http://localhost:8081/api/bookmark/list')
         ])
         
         const [tagsData, bookmarksData] = await Promise.all([
@@ -94,7 +94,7 @@ const Bookmarks = () => {
       }
       
       // Build URL with different filtering approaches
-      let url = 'http://localhost:8080/api/bookmark/list'
+      let url = 'http://localhost:8081/api/bookmark/list'
       const params = new URLSearchParams()
       
       if (filterMode === 'include' && selectedTags.length > 0) {
@@ -168,7 +168,7 @@ const Bookmarks = () => {
   const fetchTags = useCallback(async () => {
     try {
       setTagsLoading(true)
-      const response = await fetch('http://localhost:8080/api/bookmark/tag/list')
+      const response = await fetch('http://localhost:8081/api/bookmark/tag/list')
       const data = await response.json()
       
       if (data.success) {
@@ -198,8 +198,8 @@ const Bookmarks = () => {
       const tags = formData.tags.map(tag => tag.toLowerCase())
 
       const url = editingBookmark 
-        ? `http://localhost:8080/api/bookmark/edit/${editingBookmark.id}`
-        : 'http://localhost:8080/api/bookmark/create'
+        ? `http://localhost:8081/api/bookmark/edit/${editingBookmark.id}`
+        : 'http://localhost:8081/api/bookmark/create'
       
       const method = editingBookmark ? 'PUT' : 'POST'
 
@@ -365,7 +365,7 @@ const Bookmarks = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/bookmark/delete/${bookmark.id}`, {
+      const response = await fetch(`http://localhost:8081/api/bookmark/delete/${bookmark.id}`, {
         method: 'DELETE',
       })
 

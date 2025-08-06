@@ -127,14 +127,14 @@ Deletes a bookmark by ID.
 go run main.go
 ```
 
-The server will start on port 8080.
+The server will start on port 8081.
 
 ## Testing the API
 
 You can test the bookmark creation endpoint using curl:
 
 ```bash
-curl -X POST http://localhost:8080/api/bookmark/create \
+curl -X POST http://localhost:8081/api/bookmark/create \
   -H "Content-Type: application/json" \
   -d '{
     "title": "GitHub",
@@ -146,13 +146,13 @@ curl -X POST http://localhost:8080/api/bookmark/create \
 You can get all bookmarks using:
 
 ```bash
-curl -X GET http://localhost:8080/api/bookmark/list
+curl -X GET http://localhost:8081/api/bookmark/list
 ```
 
 You can edit a bookmark using its ID:
 
 ```bash
-curl -X PUT http://localhost:8080/api/bookmark/edit/1234567890 \
+curl -X PUT http://localhost:8081/api/bookmark/edit/1234567890 \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Updated GitHub",
@@ -164,7 +164,7 @@ curl -X PUT http://localhost:8080/api/bookmark/edit/1234567890 \
 You can delete a bookmark using its ID:
 
 ```bash
-curl -X DELETE http://localhost:8080/api/bookmark/delete/1234567890
+curl -X DELETE http://localhost:8081/api/bookmark/delete/1234567890
 ```
 
 ## Database
