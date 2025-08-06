@@ -173,6 +173,7 @@ func main() {
 	http.HandleFunc("/api/bookmark/create", corsGzipMiddleware(bookmarkHandler.NewBookmark))
 	http.HandleFunc("/api/bookmark/list", corsGzipMiddleware(bookmarkHandler.GetBookmarks))
 	http.HandleFunc("/api/bookmark/tag/list", corsGzipMiddleware(bookmarkHandler.GetBookmarkTags))
+	http.HandleFunc("/api/bookmark/check-duplicates", corsGzipMiddleware(bookmarkHandler.CheckDuplicates))
 	http.HandleFunc("/api/bookmark/edit/", corsGzipMiddleware(bookmarkHandler.EditBookmark))
 	http.HandleFunc("/api/bookmark/delete/", corsGzipMiddleware(bookmarkHandler.DeleteBookmark))
 

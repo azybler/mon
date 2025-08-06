@@ -35,6 +35,8 @@ const Bookmarks = () => {
   const [saving, setSaving] = useState(false)
   const [generatingTags, setGeneratingTags] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [duplicateWarning, setDuplicateWarning] = useState(null)
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     url: '',
@@ -45,6 +47,8 @@ const Bookmarks = () => {
   const debouncedSelectedTags = useDebounce(selectedTags, 300)
   const debouncedFilterMode = useDebounce(filterMode, 300)
   const debouncedSearchKeywords = useDebounce(searchKeywords, 300)
+  const debouncedFormTitle = useDebounce(formData.title, 500)
+  const debouncedFormURL = useDebounce(formData.url, 500)
 
   // Initial data fetch - only runs once
   useEffect(() => {
@@ -182,6 +186,79 @@ const Bookmarks = () => {
       setTagsLoading(false)
     }
   }, [])
+
+  const checkDuplicates = useCallback(async (title, url) => {
+    // Skip check if both title and URL are empty
+    if (!title.trim() && !url.trim()) {
+      setDuplicateWarning(null)
+      return
+    }
+
+    try {
+      setCheckingDuplicates(true)
+      
+      const response = await fetch('http://localhost:8081/api/bookmark/check-duplicates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          url: url.trim(),
+          id: editingBookmark?.id // Exclude current bookmark when editing
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        if (data.has_duplicates && data.duplicates.length > 0) {
+          const duplicateMessages = []
+          
+          // Check for title duplicates
+          const titleDuplicates = data.duplicates.filter(d => 
+            title.trim() && d.title.trim().toLowerCase() === title.trim().toLowerCase()
+          )
+          if (titleDuplicates.length > 0) {
+            duplicateMessages.push(`Title "${title}" already exists`)
+          }
+          
+          // Check for URL duplicates
+          const urlDuplicates = data.duplicates.filter(d => 
+            url.trim() && d.url.trim().toLowerCase() === url.trim().toLowerCase()
+          )
+          if (urlDuplicates.length > 0) {
+            duplicateMessages.push(`URL "${url}" already exists`)
+          }
+          
+          if (duplicateMessages.length > 0) {
+            setDuplicateWarning({
+              message: duplicateMessages.join(' and '),
+              duplicates: data.duplicates
+            })
+          } else {
+            setDuplicateWarning(null)
+          }
+        } else {
+          setDuplicateWarning(null)
+        }
+      }
+    } catch (err) {
+      console.error('Error checking duplicates:', err)
+      // Don't show error to user for duplicate checking - it's not critical
+    } finally {
+      setCheckingDuplicates(false)
+    }
+  }, [editingBookmark?.id])
+
+  // Check for duplicates when title or URL changes
+  useEffect(() => {
+    if (showModal && (debouncedFormTitle || debouncedFormURL)) {
+      checkDuplicates(debouncedFormTitle, debouncedFormURL)
+    } else {
+      setDuplicateWarning(null)
+    }
+  }, [debouncedFormTitle, debouncedFormURL, showModal, checkDuplicates])
 
   const createBookmark = async (e) => {
     e.preventDefault()
@@ -360,6 +437,7 @@ const Bookmarks = () => {
     setShowModal(false)
     setEditingBookmark(null)
     setFormData({ title: '', url: '', tags: [] })
+    setDuplicateWarning(null)
   }
 
   const openBookmark = (url) => {
@@ -601,6 +679,45 @@ const Bookmarks = () => {
         }
       >
         <form id="bookmark-form" onSubmit={createBookmark} className="bookmark-form">
+          {/* Duplicate warning */}
+          {duplicateWarning && (
+            <div className="duplicate-warning" style={{
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffeaa7',
+              borderRadius: '4px',
+              padding: '12px',
+              marginBottom: '16px',
+              color: '#856404'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+                ⚠️ Potential Duplicate Detected
+              </div>
+              <div style={{ marginBottom: '8px' }}>
+                {duplicateWarning.message}
+              </div>
+              {duplicateWarning.duplicates && duplicateWarning.duplicates.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.9em', marginBottom: '6px' }}>
+                    Existing bookmark(s):
+                  </div>
+                  {duplicateWarning.duplicates.map((duplicate, index) => (
+                    <div key={duplicate.id} style={{ 
+                      fontSize: '0.85em', 
+                      marginLeft: '12px',
+                      marginBottom: '4px',
+                      color: '#6c757d'
+                    }}>
+                      • {duplicate.title} - {duplicate.url}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize: '0.85em', marginTop: '8px', fontStyle: 'italic' }}>
+                You can still proceed if this is intentional.
+              </div>
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="title">Title *</label>
             <input

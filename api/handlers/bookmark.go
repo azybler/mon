@@ -87,6 +87,13 @@ type TagsResponse struct {
 	Count   int      `json:"count"`
 }
 
+type DuplicateCheckResponse struct {
+	Success       bool       `json:"success"`
+	Message       string     `json:"message"`
+	HasDuplicates bool       `json:"has_duplicates"`
+	Duplicates    []Bookmark `json:"duplicates,omitempty"`
+}
+
 type BookmarkHandler struct {
 	db *badger.DB
 }
@@ -903,6 +910,113 @@ func (h *BookmarkHandler) EditBookmark(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Message: "Bookmark updated successfully",
 		Data:    updatedBookmark,
+	}
+
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *BookmarkHandler) CheckDuplicates(w http.ResponseWriter, r *http.Request) {
+	// Only allow POST requests
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Set content type to JSON
+	w.Header().Set("Content-Type", "application/json")
+
+	// Parse JSON request body
+	var req struct {
+		Title string `json:"title"`
+		URL   string `json:"url"`
+		ID    string `json:"id,omitempty"` // Optional ID to exclude from duplicate check (for editing)
+	}
+
+	if err := readJSONRequest(r, &req); err != nil {
+		response := DuplicateCheckResponse{
+			Success: false,
+			Message: "Invalid JSON format",
+		}
+		writeJSONResponse(w, http.StatusBadRequest, response)
+		return
+	}
+
+	// At least one field must be provided
+	if req.Title == "" && req.URL == "" {
+		response := DuplicateCheckResponse{
+			Success: false,
+			Message: "Either title or URL must be provided",
+		}
+		writeJSONResponse(w, http.StatusBadRequest, response)
+		return
+	}
+
+	var duplicates []Bookmark
+
+	// Check for duplicates in BadgerDB
+	err := h.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 50
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			key := item.Key()
+
+			// Only process keys that start with "bookmark_"
+			if len(key) >= 9 && string(key[:9]) == "bookmark_" {
+				err := item.Value(func(val []byte) error {
+					var bookmark Bookmark
+					if err := json.Unmarshal(val, &bookmark); err != nil {
+						// Skip invalid JSON entries
+						return nil
+					}
+
+					// Skip if this is the same bookmark (for editing)
+					if req.ID != "" && bookmark.ID == req.ID {
+						return nil
+					}
+
+					// Check for exact matches
+					titleMatch := req.Title != "" && strings.TrimSpace(bookmark.Title) == strings.TrimSpace(req.Title)
+					urlMatch := req.URL != "" && strings.TrimSpace(bookmark.URL) == strings.TrimSpace(req.URL)
+
+					if titleMatch || urlMatch {
+						duplicates = append(duplicates, bookmark)
+					}
+
+					return nil
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		response := DuplicateCheckResponse{
+			Success: false,
+			Message: "Error checking for duplicates",
+		}
+		writeJSONResponse(w, http.StatusInternalServerError, response)
+		return
+	}
+
+	// Return response
+	hasDuplicates := len(duplicates) > 0
+	message := "No duplicates found"
+	if hasDuplicates {
+		message = fmt.Sprintf("Found %d potential duplicate(s)", len(duplicates))
+	}
+
+	response := DuplicateCheckResponse{
+		Success:       true,
+		Message:       message,
+		HasDuplicates: hasDuplicates,
+		Duplicates:    duplicates,
 	}
 
 	writeJSONResponse(w, http.StatusOK, response)
