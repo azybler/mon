@@ -316,9 +316,16 @@ const Bookmarks = () => {
       const suggestedTags = data.choices[0]?.message?.content?.trim()
       
       if (suggestedTags) {
+        // Parse the AI-generated tags into an array
+        // Assuming tags are comma-separated, split and clean them
+        const tagsArray = suggestedTags
+          .split(',')
+          .map(tag => tag.trim().toLowerCase())
+          .filter(tag => tag.length > 0)
+        
         setFormData(prev => ({
           ...prev,
-          tags: suggestedTags
+          tags: tagsArray
         }))
       } else {
         alert('No tags were generated. Please try again.')
