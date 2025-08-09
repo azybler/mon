@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import TagsFilter from 'components/TagsFilter/TagsFilter'
 import SearchInput from 'components/SearchInput/SearchInput'
 import Modal from 'components/Modal/Modal'
+import TagAutocompleteInput from 'components/TagAutocomplete/TagAutocompleteInput'
 
 const YoutubeWatchlist = () => {
   // Debounce hook for performance optimization
@@ -37,7 +38,7 @@ const YoutubeWatchlist = () => {
   const [formData, setFormData] = useState({
     title: '',
     url: '',
-    tags: ''
+    tags: []
   })
 
   // Debounce filter changes to prevent excessive API calls
@@ -216,12 +217,8 @@ const YoutubeWatchlist = () => {
     try {
       setSaving(true)
       
-      // Parse tags from comma-separated string
-      const tags = formData.tags
-        .split(',')
-        .map(tag => tag.trim())
-        .map(tag => tag.toLowerCase())
-        .filter(tag => tag.length > 0)
+      // Use tags array directly (already parsed)
+      const tags = formData.tags.map(tag => tag.toLowerCase())
 
       const url = editingVideo 
         ? `http://localhost:8081/api/youtube/edit/${editingVideo.id}`
@@ -245,7 +242,7 @@ const YoutubeWatchlist = () => {
       
       if (data.success) {
         // Reset form
-        setFormData({ title: '', url: '', tags: '' })
+        setFormData({ title: '', url: '', tags: [] })
         setEditingVideo(null)
         setShowModal(false)
         
@@ -262,9 +259,6 @@ const YoutubeWatchlist = () => {
         
         // Only refetch tags if we added/changed tags
         const newTags = formData.tags
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag.length > 0)
         
         const oldTags = editingVideo?.tags || []
         const tagsChanged = JSON.stringify(newTags.sort()) !== JSON.stringify(oldTags.sort())
@@ -288,7 +282,7 @@ const YoutubeWatchlist = () => {
     setFormData({
       title: video.title,
       url: video.url,
-      tags: video.tags ? video.tags.join(', ') : ''
+      tags: video.tags || []
     })
     setShowModal(true)
   }
@@ -346,9 +340,15 @@ const YoutubeWatchlist = () => {
       const suggestedTags = data.choices[0]?.message?.content?.trim()
       
       if (suggestedTags) {
+        // Parse the AI-generated tags into an array
+        const tagsArray = suggestedTags
+          .split(',')
+          .map(tag => tag.trim().toLowerCase())
+          .filter(tag => tag.length > 0)
+
         setFormData(prev => ({
           ...prev,
-          tags: suggestedTags
+          tags: tagsArray
         }))
       } else {
         alert('No tags were generated. Please try again.')
@@ -382,7 +382,7 @@ const YoutubeWatchlist = () => {
   const closeModal = () => {
     setShowModal(false)
     setEditingVideo(null)
-    setFormData({ title: '', url: '', tags: '' })
+    setFormData({ title: '', url: '', tags: [] })
   }
 
   const openVideo = (url) => {
@@ -665,13 +665,11 @@ const YoutubeWatchlist = () => {
           <div className="form-group">
             <label htmlFor="tags">Tags</label>
             <div className="tags-input-container">
-              <input
-                type="text"
-                id="tags"
-                name="tags"
-                value={formData.tags}
-                onChange={handleInputChange}
-                placeholder="tutorial, programming, music (comma separated)"
+              <TagAutocompleteInput
+                selectedTags={formData.tags}
+                onTagsChange={(newTags) => setFormData(prev => ({ ...prev, tags: newTags }))}
+                availableTags={tags}
+                placeholder="Add tags..."
                 className="tags-input"
               />
               <button 
@@ -684,7 +682,7 @@ const YoutubeWatchlist = () => {
                 {generatingTags ? '⏳' : '🤖'}
               </button>
             </div>
-            <small>Separate multiple tags with commas, or use AI to generate them</small>
+            <small>Type to add tags, press Enter to create new ones, or use AI to generate them</small>
           </div>
         </form>
       </Modal>

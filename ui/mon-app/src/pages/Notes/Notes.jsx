@@ -3,6 +3,7 @@ import WysiwygEditor from 'components/WysiwygEditor/WysiwygEditor'
 import TagsFilter from 'components/TagsFilter/TagsFilter'
 import SearchInput from 'components/SearchInput/SearchInput'
 import Modal from 'components/Modal/Modal'
+import TagAutocompleteInput from 'components/TagAutocomplete/TagAutocompleteInput'
 
 const Notes = () => {
   // Debounce hook for performance optimization
@@ -38,7 +39,7 @@ const Notes = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    tags: ''
+    tags: []
   })
 
   // Debounce filter changes to prevent excessive API calls
@@ -202,12 +203,8 @@ const Notes = () => {
     try {
       setSaving(true)
       
-      // Parse tags from comma-separated string
-      const tags = formData.tags
-        .split(',')
-        .map(tag => tag.trim())
-        .map(tag => tag.toLowerCase())
-        .filter(tag => tag.length > 0)
+      // Use tags array directly (already parsed)
+      const tags = formData.tags.map(tag => tag.toLowerCase())
 
       const url = editingNote 
         ? `http://localhost:8081/api/note/edit/${editingNote.id}`
@@ -231,7 +228,7 @@ const Notes = () => {
       
       if (data.success) {
         // Reset form
-        setFormData({ title: '', description: '', tags: '' })
+        setFormData({ title: '', description: '', tags: [] })
         setEditingNote(null)
         setShowModal(false)
         
@@ -248,10 +245,6 @@ const Notes = () => {
         
         // Only refetch tags if we added/changed tags
         const newTags = formData.tags
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag.length > 0)
-
         const oldTags = editingNote?.tags || []
         const tagsChanged = JSON.stringify(newTags.sort()) !== JSON.stringify(oldTags.sort())
         
@@ -274,7 +267,7 @@ const Notes = () => {
     setFormData({
       title: note.title,
       description: note.description,
-      tags: note.tags ? note.tags.join(', ') : ''
+      tags: note.tags || []
     })
     setShowModal(true)
   }
@@ -341,9 +334,15 @@ const Notes = () => {
       const suggestedTags = data.choices[0]?.message?.content?.trim()
       
       if (suggestedTags) {
+        // Parse the AI-generated tags into an array (comma-separated -> array)
+        const tagsArray = suggestedTags
+          .split(',')
+          .map(tag => tag.trim().toLowerCase())
+          .filter(tag => tag.length > 0)
+
         setFormData(prev => ({
           ...prev,
-          tags: suggestedTags
+          tags: tagsArray
         }))
       } else {
         alert('No tags were generated. Please try again.')
@@ -377,7 +376,7 @@ const Notes = () => {
   const closeModal = () => {
     setShowModal(false)
     setEditingNote(null)
-    setFormData({ title: '', description: '', tags: '' })
+    setFormData({ title: '', description: '', tags: [] })
   }
 
   const deleteNote = async (note) => {
@@ -633,13 +632,11 @@ const Notes = () => {
           <div className="form-group">
             <label htmlFor="tags">Tags</label>
             <div className="tags-input-container">
-              <input
-                type="text"
-                id="tags"
-                name="tags"
-                value={formData.tags}
-                onChange={handleInputChange}
-                placeholder="work, reference, tutorial (comma separated)"
+              <TagAutocompleteInput
+                selectedTags={formData.tags}
+                onTagsChange={(newTags) => setFormData(prev => ({ ...prev, tags: newTags }))}
+                availableTags={tags}
+                placeholder="Add tags..."
                 className="tags-input"
               />
               <button 
@@ -652,7 +649,7 @@ const Notes = () => {
                 {generatingTags ? '⏳' : '🤖'}
               </button>
             </div>
-            <small>Separate multiple tags with commas, or use AI to generate them</small>
+            <small>Type to add tags, press Enter to create new ones, or use AI to generate them</small>
           </div>
         </form>
       </Modal>
