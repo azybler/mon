@@ -169,6 +169,7 @@ func main() {
 	noteHandler := handlers.NewNoteHandler(db)
 	youtubeHandler := handlers.NewYoutubeHandler(db)
 	importExportHandler := handlers.NewImportExportHandler(db)
+	tagAliasHandler := handlers.NewTagAliasHandler(db)
 
 	// Register bookmark API routes with CORS and gzip middleware
 	http.HandleFunc("/api/bookmark/create", corsGzipMiddleware(bookmarkHandler.NewBookmark))
@@ -195,6 +196,13 @@ func main() {
 	// Register Import/Export routes
 	http.HandleFunc("/api/export/", corsGzipMiddleware(importExportHandler.ExportAll))
 	http.HandleFunc("/api/import/", corsGzipMiddleware(importExportHandler.ImportAll))
+
+	// Register Tag Alias routes
+	http.HandleFunc("/api/tag-aliases", corsGzipMiddleware(tagAliasHandler.GetAliases))
+	http.HandleFunc("/api/tag-aliases/batch", corsGzipMiddleware(tagAliasHandler.SetAliasesBatch))
+	http.HandleFunc("/api/tag-aliases/group", corsGzipMiddleware(tagAliasHandler.DeleteAlias))
+	// delete single alias via same handler (path check)
+	http.HandleFunc("/api/tag-aliases/delete", corsGzipMiddleware(tagAliasHandler.DeleteAlias))
 
 	// Serve robots.txt to deny all crawlers
 	http.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {

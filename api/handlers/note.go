@@ -362,6 +362,15 @@ func (h *NoteHandler) NewNote(w http.ResponseWriter, r *http.Request) {
 	if req.Tags == nil {
 		req.Tags = []string{}
 	}
+	// Normalize tags via aliases (note)
+	aliasHandler := NewTagAliasHandler(h.db)
+	_ = h.db.View(func(txn *badger.Txn) error {
+		aliases, err := aliasHandler.getAliasMap(txn, "note")
+		if err == nil {
+			req.Tags = normalizeTags(req.Tags, aliases)
+		}
+		return nil
+	})
 
 	// Generate unique ID (simple timestamp + title hash for now)
 	now := time.Now()
@@ -435,6 +444,17 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 	var filterTags []string
 	var excludeTags []string
 
+	// Load alias map once
+	aliasHandler := NewTagAliasHandler(h.db)
+	var aliasMap map[string]string
+	_ = h.db.View(func(txn *badger.Txn) error {
+		m, err := aliasHandler.getAliasMap(txn, "note")
+		if err == nil {
+			aliasMap = m
+		}
+		return nil
+	})
+
 	if queryTags != "" {
 		// Split tags by comma and trim whitespace
 		for _, tag := range strings.Split(queryTags, ",") {
@@ -453,6 +473,17 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 				excludeTags = append(excludeTags, trimmed)
 			}
 		}
+	}
+
+	// Normalize filters and expression
+	if len(filterTags) > 0 && aliasMap != nil {
+		filterTags = normalizeTags(filterTags, aliasMap)
+	}
+	if len(excludeTags) > 0 && aliasMap != nil {
+		excludeTags = normalizeTags(excludeTags, aliasMap)
+	}
+	if advancedExpression != "" && aliasMap != nil {
+		advancedExpression = normalizeExpression(advancedExpression, aliasMap)
 	}
 
 	var notes []Note
@@ -478,6 +509,11 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 					if err := json.Unmarshal(val, &note); err != nil {
 						// Skip invalid JSON entries
 						return nil
+					}
+
+					// Normalize tags for search/UI
+					if aliasMap != nil && len(note.Tags) > 0 {
+						note.Tags = normalizeTags(note.Tags, aliasMap)
 					}
 
 					// Apply tag filtering based on mode
@@ -617,6 +653,17 @@ func (h *NoteHandler) GetNoteTags(w http.ResponseWriter, r *http.Request) {
 
 	var tags []string
 
+	// Load alias map for merging counts
+	aliasHandler := NewTagAliasHandler(h.db)
+	var aliasMap map[string]string
+	_ = h.db.View(func(txn *badger.Txn) error {
+		m, err := aliasHandler.getAliasMap(txn, "note")
+		if err == nil {
+			aliasMap = m
+		}
+		return nil
+	})
+
 	// Read tag counts from BadgerDB
 	err := h.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("note_tag_counts"))
@@ -634,7 +681,18 @@ func (h *NoteHandler) GetNoteTags(w http.ResponseWriter, r *http.Request) {
 			if err := json.Unmarshal(val, &tagCounts); err != nil {
 				return err
 			}
-
+			// Merge counts by alias -> canonical
+			if len(aliasMap) > 0 {
+				merged := make(map[string]int)
+				for tag, count := range tagCounts {
+					canon := aliasMap[tag]
+					if canon == "" {
+						canon = tag
+					}
+					merged[canon] += count
+				}
+				tagCounts = merged
+			}
 			// Convert to "tag,{count}" format
 			tags = make([]string, 0, len(tagCounts))
 			for tag, count := range tagCounts {
@@ -816,6 +874,15 @@ func (h *NoteHandler) EditNote(w http.ResponseWriter, r *http.Request) {
 	if req.Tags == nil {
 		req.Tags = []string{}
 	}
+	// Normalize requested tags via aliases
+	aliasHandler := NewTagAliasHandler(h.db)
+	_ = h.db.View(func(txn *badger.Txn) error {
+		aliases, err := aliasHandler.getAliasMap(txn, "note")
+		if err == nil {
+			req.Tags = normalizeTags(req.Tags, aliases)
+		}
+		return nil
+	})
 
 	var updatedNote Note
 	var oldTags []string

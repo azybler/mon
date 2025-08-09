@@ -259,6 +259,15 @@ func (h *YoutubeHandler) NewYoutubeVideo(w http.ResponseWriter, r *http.Request)
 	if req.Tags == nil {
 		req.Tags = []string{}
 	}
+	// Normalize tags via aliases (youtube)
+	aliasHandler := NewTagAliasHandler(h.db)
+	_ = h.db.View(func(txn *badger.Txn) error {
+		aliases, err := aliasHandler.getAliasMap(txn, "youtube")
+		if err == nil {
+			req.Tags = normalizeTags(req.Tags, aliases)
+		}
+		return nil
+	})
 
 	// Generate unique ID
 	now := time.Now()
@@ -333,6 +342,17 @@ func (h *YoutubeHandler) GetYoutubeVideos(w http.ResponseWriter, r *http.Request
 	var filterTags []string
 	var excludeTags []string
 
+	// Load alias map once
+	aliasHandler := NewTagAliasHandler(h.db)
+	var aliasMap map[string]string
+	_ = h.db.View(func(txn *badger.Txn) error {
+		m, err := aliasHandler.getAliasMap(txn, "youtube")
+		if err == nil {
+			aliasMap = m
+		}
+		return nil
+	})
+
 	if queryTags != "" {
 		// Split tags by comma and trim whitespace
 		for _, tag := range strings.Split(queryTags, ",") {
@@ -351,6 +371,17 @@ func (h *YoutubeHandler) GetYoutubeVideos(w http.ResponseWriter, r *http.Request
 				excludeTags = append(excludeTags, trimmed)
 			}
 		}
+	}
+
+	// Normalize filter tags, exclude tags and expression
+	if len(filterTags) > 0 && aliasMap != nil {
+		filterTags = normalizeTags(filterTags, aliasMap)
+	}
+	if len(excludeTags) > 0 && aliasMap != nil {
+		excludeTags = normalizeTags(excludeTags, aliasMap)
+	}
+	if advancedExpression != "" && aliasMap != nil {
+		advancedExpression = normalizeExpression(advancedExpression, aliasMap)
 	}
 
 	var videos []YoutubeVideo
@@ -377,6 +408,10 @@ func (h *YoutubeHandler) GetYoutubeVideos(w http.ResponseWriter, r *http.Request
 					if err := json.Unmarshal(val, &video); err != nil {
 						// Skip invalid JSON entries
 						return nil
+					}
+					// Normalize tags for search/UI
+					if aliasMap != nil && len(video.Tags) > 0 {
+						video.Tags = normalizeTags(video.Tags, aliasMap)
 					}
 
 					// Skip empty videos (videos with empty ID, title, or URL)
@@ -521,6 +556,17 @@ func (h *YoutubeHandler) GetYoutubeTags(w http.ResponseWriter, r *http.Request) 
 
 	var tags []string
 
+	// Load alias map
+	aliasHandler := NewTagAliasHandler(h.db)
+	var aliasMap map[string]string
+	_ = h.db.View(func(txn *badger.Txn) error {
+		m, err := aliasHandler.getAliasMap(txn, "youtube")
+		if err == nil {
+			aliasMap = m
+		}
+		return nil
+	})
+
 	// Read tag counts from BadgerDB
 	err := h.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("youtube_tag_counts"))
@@ -538,7 +584,18 @@ func (h *YoutubeHandler) GetYoutubeTags(w http.ResponseWriter, r *http.Request) 
 			if err := json.Unmarshal(val, &tagCounts); err != nil {
 				return err
 			}
-
+			// Merge counts using alias map
+			if len(aliasMap) > 0 {
+				merged := make(map[string]int)
+				for tag, count := range tagCounts {
+					canon := aliasMap[tag]
+					if canon == "" {
+						canon = tag
+					}
+					merged[canon] += count
+				}
+				tagCounts = merged
+			}
 			// Convert to "tag,{count}" format
 			tags = make([]string, 0, len(tagCounts))
 			for tag, count := range tagCounts {
@@ -729,6 +786,15 @@ func (h *YoutubeHandler) EditYoutubeVideo(w http.ResponseWriter, r *http.Request
 	if req.Tags == nil {
 		req.Tags = []string{}
 	}
+	// Normalize requested tags via aliases
+	aliasHandler := NewTagAliasHandler(h.db)
+	_ = h.db.View(func(txn *badger.Txn) error {
+		aliases, err := aliasHandler.getAliasMap(txn, "youtube")
+		if err == nil {
+			req.Tags = normalizeTags(req.Tags, aliases)
+		}
+		return nil
+	})
 
 	var updatedVideo YoutubeVideo
 	var oldTags []string

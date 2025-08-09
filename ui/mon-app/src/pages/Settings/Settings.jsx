@@ -3,6 +3,13 @@ import { useTheme } from 'contexts/ThemeContext'
 
 function Settings() {
   const { theme, toggleTheme } = useTheme()
+  // Tag aliases UI state
+  const [tagType, setTagType] = useState('bookmark')
+  const [availableTags, setAvailableTags] = useState([])
+  const [aliasCanonical, setAliasCanonical] = useState('')
+  const [aliasCandidates, setAliasCandidates] = useState('')
+  const [aliasGroups, setAliasGroups] = useState({})
+  const [loadingAliases, setLoadingAliases] = useState(false)
   const [aiConfig, setAiConfig] = useState({
     apiKey: '',
     model: 'deepseek/deepseek-chat-v3-0324:free',
@@ -25,6 +32,99 @@ function Settings() {
       }
     }
   }, [])
+
+  // Load tags and alias groups when type changes
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoadingAliases(true)
+      try {
+        const tagURL = tagType === 'bookmark'
+          ? 'http://localhost:8081/api/bookmark/tag/list'
+          : tagType === 'note'
+            ? 'http://localhost:8081/api/note/tag/list'
+            : 'http://localhost:8081/api/youtube/tag/list'
+        const [tagsRes, aliasRes] = await Promise.all([
+          fetch(tagURL),
+          fetch(`http://localhost:8081/api/tag-aliases?type=${tagType}`)
+        ])
+        const tagsJson = await tagsRes.json().catch(() => null)
+        const aliasJson = await aliasRes.json().catch(() => null)
+        if (tagsRes.ok && Array.isArray(tagsJson?.data)) {
+          const tags = tagsJson.data.map(s => (s || '').split(',')[0]).filter(Boolean).sort()
+          setAvailableTags(tags)
+        } else {
+          setAvailableTags([])
+        }
+        if (aliasRes.ok && aliasJson?.data) {
+          setAliasGroups(aliasJson.data)
+        } else {
+          setAliasGroups({})
+        }
+      } catch (e) {
+        console.error(e)
+        setAvailableTags([])
+        setAliasGroups({})
+      } finally {
+        setLoadingAliases(false)
+      }
+    }
+    fetchData()
+  }, [tagType])
+
+  const createAliasGroup = async () => {
+    const canonical = aliasCanonical.trim()
+    const aliases = aliasCandidates.split(',').map(s => s.trim()).filter(Boolean)
+    if (!canonical || aliases.length === 0) return alert('Enter canonical and at least one alias')
+    try {
+      const res = await fetch('http://localhost:8081/api/tag-aliases/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: tagType, canonical, aliases })
+      })
+      if (!res.ok) throw new Error('Failed to save aliases')
+      setAliasCanonical('')
+      setAliasCandidates('')
+      const aliasRes = await fetch(`http://localhost:8081/api/tag-aliases?type=${tagType}`)
+      const aliasJson = await aliasRes.json().catch(() => null)
+      if (aliasRes.ok && aliasJson?.data) setAliasGroups(aliasJson.data)
+    } catch (e) {
+      console.error(e)
+      alert('Failed to save aliases')
+    }
+  }
+
+  const removeAlias = async (canonical, alias) => {
+    try {
+      const url = `http://localhost:8081/api/tag-aliases/delete?type=${encodeURIComponent(tagType)}&alias=${encodeURIComponent(alias)}`
+      const res = await fetch(url, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed')
+      setAliasGroups(prev => {
+        const next = { ...prev }
+        next[canonical] = (next[canonical] || []).filter(a => a !== alias)
+        if ((next[canonical] || []).length === 0) delete next[canonical]
+        return next
+      })
+    } catch (e) {
+      console.error(e)
+      alert('Failed to remove alias')
+    }
+  }
+
+  const removeGroup = async (canonical) => {
+    try {
+      const url = `http://localhost:8081/api/tag-aliases/group?type=${encodeURIComponent(tagType)}&canonical=${encodeURIComponent(canonical)}`
+      const res = await fetch(url, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed')
+      setAliasGroups(prev => {
+        const next = { ...prev }
+        delete next[canonical]
+        return next
+      })
+    } catch (e) {
+      console.error(e)
+      alert('Failed to remove group')
+    }
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -138,6 +238,65 @@ function Settings() {
       </div>
 
       <div className="settings-section">
+            <h3>Tag Groups (Combine Aliases)</h3>
+            <p className="settings-description">Group multiple tags to act as one. Example: combine ai, a.i., artificialintelligence under artificial-intelligence. Reversible at any time.</p>
+
+            <div className="settings-form">
+              <div className="form-group" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <label>Type</label>
+                <select value={tagType} onChange={e => setTagType(e.target.value)} className="settings-input" style={{ maxWidth: 220 }}>
+                  <option value="bookmark">Bookmarks</option>
+                  <option value="note">Notes</option>
+                  <option value="youtube">YouTube</option>
+                </select>
+                {loadingAliases && <small>Loading…</small>}
+              </div>
+
+              <div className="form-group">
+                <label>Canonical Tag</label>
+                <input list="available-tags" className="settings-input" value={aliasCanonical} onChange={e => setAliasCanonical(e.target.value)} placeholder="e.g. artificial-intelligence" />
+                <datalist id="available-tags">
+                  {availableTags.map(t => <option key={t} value={t} />)}
+                </datalist>
+                <small>Pick the main tag to keep.</small>
+              </div>
+
+              <div className="form-group">
+                <label>Aliases to Combine</label>
+                <input className="settings-input" value={aliasCandidates} onChange={e => setAliasCandidates(e.target.value)} placeholder="Comma-separated list, e.g. ai, a.i, artificialintelligence" />
+                <small>All listed tags will behave as the canonical tag.</small>
+              </div>
+
+              <div className="settings-actions">
+                <button className="save-button" onClick={createAliasGroup}>Save Group</button>
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <strong>Existing Groups</strong>
+                {Object.keys(aliasGroups).length === 0 && <div style={{ fontSize: 14, opacity: 0.8 }}>No groups yet.</div>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                  {Object.entries(aliasGroups).map(([canon, aliases]) => (
+                    <div key={canon} style={{ border: '1px solid var(--border-color, #ddd)', borderRadius: 6, padding: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div><strong>{canon}</strong></div>
+                        <button className="reset-button" onClick={() => removeGroup(canon)}>Ungroup</button>
+                      </div>
+                      <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {aliases.map(a => (
+                          <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--chip-bg, #f4f4f4)', padding: '2px 8px', borderRadius: 999 }}>
+                            {a}
+                            <button onClick={() => removeAlias(canon, a)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }} aria-label={`remove ${a}`}>✕</button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="settings-section">
         <h3>AI Tag Suggestions</h3>
         <p className="settings-description">
           Configure AI-powered tag suggestions for bookmarks using OpenRouter API.
