@@ -11,6 +11,7 @@
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+  backdrop-filter: blur(5px); /* Apply blur effect */
 }
 
 .modal-content {
@@ -236,25 +237,25 @@
   .modal-overlay {
     padding: 10px;
   }
-  
+
   .modal-content {
     max-height: 95vh;
   }
-  
+
   .modal-header {
     padding: 16px 20px 0;
     padding-bottom: 12px;
   }
-  
+
   .modal-body {
     padding: 16px 20px 20px;
   }
-  
+
   .modal-actions {
     padding: 16px 20px 20px;
     margin-top: 1rem;
   }
-  
+
   .modal-header h3 {
     font-size: 1.1rem;
   }
