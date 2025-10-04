@@ -502,8 +502,9 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 			item := it.Item()
 			key := item.Key()
 
-			// Only process keys that start with "note_"
-			if len(key) >= 5 && string(key[:5]) == "note_" {
+			// Only process keys that start with "note_" and exclude metadata keys
+			keyStr := string(key)
+			if len(keyStr) >= 5 && strings.HasPrefix(keyStr, "note_") && keyStr != "note_tag_counts" {
 				err := item.Value(func(val []byte) error {
 					var note Note
 					if err := json.Unmarshal(val, &note); err != nil {
@@ -608,7 +609,9 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 
-					notes = append(notes, note)
+					if note.ID != "" {
+						notes = append(notes, note)
+					}
 					return nil
 				})
 				if err != nil {

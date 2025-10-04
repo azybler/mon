@@ -524,8 +524,9 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 			item := it.Item()
 			key := item.Key()
 
-			// Only process keys that start with "bookmark_"
-			if len(key) >= 9 && string(key[:9]) == "bookmark_" {
+			// Only process keys that start with "bookmark_" and exclude metadata keys
+			keyStr := string(key)
+			if len(keyStr) >= 9 && strings.HasPrefix(keyStr, "bookmark_") && keyStr != "tag_counts" && keyStr != "note_tag_counts" && keyStr != "youtube_tag_counts" {
 				err := item.Value(func(val []byte) error {
 					var bookmark Bookmark
 					if err := json.Unmarshal(val, &bookmark); err != nil {
@@ -630,7 +631,9 @@ func (h *BookmarkHandler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 
-					bookmarks = append(bookmarks, bookmark)
+					if bookmark.ID != "" {
+						bookmarks = append(bookmarks, bookmark)
+					}
 					return nil
 				})
 				if err != nil {
